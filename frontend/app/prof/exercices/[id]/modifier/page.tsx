@@ -1,5 +1,6 @@
 'use client';
 
+import { apiUrl } from '@/lib/api-url';
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ImagePlus, Loader2, Save } from 'lucide-react';
@@ -16,7 +17,6 @@ import { toast } from 'sonner';
 
 type ClassItem = { id: string; code: string; name: string; chapters: { id: string; title: string }[] };
 type ExerciseDetails = { id: string; title: string; description: string | null; difficulty: string; tags: string[]; publication_status: string; image_url: string; classes: { code: string } | null; chapters: { title: string } | null };
-const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
 
 export default function EditExercisePage({ params }: { params: { id: string } }) {
   const router = useRouter();

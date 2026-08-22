@@ -1,5 +1,6 @@
 'use client';
 
+import { apiUrl } from '@/lib/api-url';
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { ArrowRight, BookOpen, ChevronRight, FileText, HelpCircle, MessageCircle } from 'lucide-react';
@@ -14,7 +15,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 type Exercise = { id: string; title: string; difficulty: 'facile' | 'moyen' | 'difficile'; tags: string[]; published_at: string; image_url?: string; classes?: { code: string }; chapters?: { title: string } };
 type ClassItem = { id: string; code: string; name: string; chapters: unknown[]; exercise_count: number };
 type Question = { id: string; exercise_id: string; exercise_title: string; body: string; reply_count: number; is_resolved: boolean; created_at: string };
-const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
 function questionStatus(question: Question): QuestionStatus { return question.is_resolved ? 'resolu' : question.reply_count ? 'repondu' : 'en_attente'; }
 function timeAgo(iso: string) { const seconds = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000); return seconds < 3600 ? `il y a ${Math.max(1, Math.floor(seconds / 60))} min` : seconds < 86400 ? `il y a ${Math.floor(seconds / 3600)} h` : `il y a ${Math.floor(seconds / 86400)} j`; }
 

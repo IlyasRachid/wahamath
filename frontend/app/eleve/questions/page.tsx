@@ -1,5 +1,6 @@
 'use client';
 
+import { apiUrl } from '@/lib/api-url';
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { HelpCircle, Lock, MessageCircle, Search } from 'lucide-react';
@@ -14,7 +15,6 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 
 type Question = { id: string; exercise_id: string; exercise_title: string; body: string; reply_count: number; is_resolved: boolean; is_locked: boolean; created_at: string };
-const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
 
 function timeAgo(iso: string) {
   const seconds = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);

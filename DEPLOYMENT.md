@@ -1,61 +1,55 @@
-# Deploying WahaMath
+# Deploying WahaMath on Vercel
 
-This project has three deployed services:
+WahaMath deploys from one private Git repository to one Vercel project:
 
-- **Frontend**: Next.js application on Vercel.
-- **API**: FastAPI application on Render, built with `backend/Dockerfile`.
-- **Auth, database and storage**: existing Supabase project.
+- `frontend/` is the Next.js service.
+- `backend/` is the FastAPI service.
+- `vercel.json` routes `/api/*` to FastAPI and all other paths to Next.js.
+- Supabase continues to provide Auth, Postgres, and Storage.
 
-## Before publishing
+The frontend calls `/api/*` on the same deployment URL in production. There is
+no separate API host, CORS configuration, or `NEXT_PUBLIC_API_URL` needed on
+Vercel.
 
-Use one Git repository containing `frontend/`, `backend/`, and `database/`. Never commit `.env.local`, SMTP keys, Supabase service-role keys, or other secrets.
+## Vercel project setup
 
-## Render API
-
-Create a new Render **Web Service** from the consolidated repository:
-
-- Environment: Docker
-- Root directory: `backend`
-- Dockerfile path: `./Dockerfile`
-- Health check path: `/health`
-
-Add these server-only environment variables in Render:
-
-```text
-SUPABASE_URL=<Supabase Project URL>
-SUPABASE_SERVICE_ROLE_KEY=<Supabase service_role key>
-FRONTEND_ORIGINS=<Vercel frontend URL>
-```
-
-Copy the resulting HTTPS URL, for example `https://wahamath-api.onrender.com`.
-
-## Vercel frontend
-
-Import the same repository into Vercel and set **Root Directory** to `frontend`.
-
-Add these production environment variables in Vercel:
+1. Import the GitHub repository in Vercel.
+2. Set the project framework to **Services**. This is required together with
+   the root `vercel.json` file for Vercel to build the two services.
+3. Keep the project root directory as `./`; do not set it to `frontend`.
+4. Add these environment variables for Production, Preview, and Development:
 
 ```text
 NEXT_PUBLIC_SUPABASE_URL=<Supabase Project URL>
 NEXT_PUBLIC_SUPABASE_ANON_KEY=<Supabase anon key>
-NEXT_PUBLIC_API_URL=<Render API HTTPS URL>
+SUPABASE_URL=<Supabase Project URL>
+SUPABASE_SERVICE_ROLE_KEY=<Supabase service_role key>
+FRONTEND_ORIGINS=<Vercel deployment URL once created>
 ```
 
-Redeploy after adding `NEXT_PUBLIC_API_URL`, since values prefixed with `NEXT_PUBLIC_` are embedded at build time.
+`SUPABASE_SERVICE_ROLE_KEY` is server-only. It must never have a
+`NEXT_PUBLIC_` prefix, be committed, or be copied into the browser.
 
-## Supabase URLs and CORS
+For the first deployment, `FRONTEND_ORIGINS` can be `http://localhost:3000`.
+Once Vercel provides its URL, replace it with that exact URL (without a
+trailing slash) and redeploy. Same-origin browser API calls do not require
+CORS, but the setting remains useful for local development.
 
-After Vercel provides its URL:
+## Supabase URL configuration
 
-1. In **Supabase → Authentication → URL Configuration**, add:
-   - the Vercel Site URL;
-   - `<Vercel URL>/reinitialiser-mot-de-passe` as an additional redirect URL.
-2. In Render, update `FRONTEND_ORIGINS` to exactly the Vercel URL (no trailing slash) and redeploy the API.
+After Vercel creates the production URL, in **Supabase → Authentication → URL
+Configuration** add:
+
+- the Vercel Site URL;
+- `<Vercel URL>/reinitialiser-mot-de-passe` as an additional redirect URL.
 
 ## Verification checklist
 
-1. Visit `<Render URL>/health`; it must return `{"status":"ok","service":"wahamath-api"}`.
+1. Visit `<Vercel URL>/health`; it must return
+   `{"status":"ok","service":"wahamath-api"}`.
 2. Open the Vercel URL and register a test student.
-3. Verify the Brevo confirmation email, teacher approval, login, exercise access, comments, moderation, and password recovery.
+3. Verify Brevo confirmation email, teacher approval, login, exercises,
+   comments, moderation, and password recovery.
 
-When a custom domain is purchased, repeat the Supabase redirect URL and `FRONTEND_ORIGINS` updates for it, then replace `NEXT_PUBLIC_API_URL` only if the API domain changes.
+When a custom domain is purchased, add it to Vercel and Supabase URL
+configuration, then update `FRONTEND_ORIGINS` in Vercel.

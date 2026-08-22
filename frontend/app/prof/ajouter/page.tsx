@@ -1,5 +1,6 @@
 'use client';
 
+import { apiUrl } from '@/lib/api-url';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Save, Send, ArrowLeft } from 'lucide-react';
@@ -90,7 +91,7 @@ export default function AddExercisePage() {
     formData.set('image', imageFile);
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000'}/api/exercises`, {
+      const response = await fetch(`${apiUrl}/api/exercises`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${session.access_token}` },
         body: formData,

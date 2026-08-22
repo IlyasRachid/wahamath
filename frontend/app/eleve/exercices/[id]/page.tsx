@@ -1,5 +1,6 @@
 'use client';
 
+import { apiUrl } from '@/lib/api-url';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -131,7 +132,7 @@ function ExerciseViewer({
     setPosting(true);
     setCommentError(null);
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000'}/api/exercises/${params.id}/comments`, {
+      const response = await fetch(`${apiUrl}/api/exercises/${params.id}/comments`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ body: commentText, parent_id: replyingTo }),
@@ -156,7 +157,7 @@ function ExerciseViewer({
   const moderateComment = async (commentId: string, action: 'hide' | 'pin' | 'resolve' | 'lock') => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000'}/api/comments/${commentId}/moderate`, {
+    const response = await fetch(`${apiUrl}/api/comments/${commentId}/moderate`, {
       method: 'POST', headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ action }),
     });
     if (response.ok) { invalidateCacheTags('comments', 'questions', 'reports'); window.location.reload(); }
@@ -165,7 +166,7 @@ function ExerciseViewer({
   const reportComment = async (commentId: string) => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000'}/api/comments/${commentId}/report`, {
+    const response = await fetch(`${apiUrl}/api/comments/${commentId}/report`, {
       method: 'POST', headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({}),
     });
     if (response.ok) invalidateCacheTags('reports');

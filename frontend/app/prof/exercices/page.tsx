@@ -1,5 +1,6 @@
 'use client';
 
+import { apiUrl } from '@/lib/api-url';
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
@@ -25,7 +26,6 @@ const publicationOptions: FilterOption[] = [
   { label: 'Tous les statuts', value: 'all' }, { label: 'Publiés', value: 'publie' },
   { label: 'Brouillons', value: 'brouillon' }, { label: 'Dépubliés', value: 'depublie' },
 ];
-const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
 
 function toExercise(item: any, index: number): Exercise {
   return {

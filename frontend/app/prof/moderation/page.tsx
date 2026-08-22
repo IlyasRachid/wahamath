@@ -1,5 +1,6 @@
 'use client';
 
+import { apiUrl } from '@/lib/api-url';
 import { useEffect, useState } from 'react';
 import { EyeOff, ShieldCheck, XCircle } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
@@ -10,7 +11,6 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 
 type Report = { id: string; comment_id: string; reason: string; comment: string; author: string; exercise_title: string };
-const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
 
 export default function ModerationPage() {
   const cachedReports = peekApiCache<{ items: Report[] }>('/api/moderation/reports');

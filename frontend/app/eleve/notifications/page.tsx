@@ -1,5 +1,6 @@
 'use client';
 
+import { apiUrl } from '@/lib/api-url';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { BellOff, CheckCheck } from 'lucide-react';
@@ -11,7 +12,6 @@ import { NotificationItem } from '@/components/shared/notification-item';
 import { EmptyState } from '@/components/shared/empty-state';
 import { Button } from '@/components/ui/button';
 
-const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
 
 export default function StudentNotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([]);

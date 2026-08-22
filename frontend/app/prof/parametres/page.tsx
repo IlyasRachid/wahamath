@@ -1,5 +1,6 @@
 'use client';
 
+import { apiUrl } from '@/lib/api-url';
 import { useEffect, useState } from 'react';
 import { KeyRound, Shield, User } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
@@ -12,7 +13,6 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 
-const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
 
 export default function TeacherSettingsPage() {
   const [name, setName] = useState(''); const [email, setEmail] = useState(''); const [loading, setLoading] = useState(true); const [saving, setSaving] = useState(false); const [newPassword, setNewPassword] = useState(''); const [confirmation, setConfirmation] = useState(''); const [changingPassword, setChangingPassword] = useState(false);

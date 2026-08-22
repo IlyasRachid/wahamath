@@ -1,5 +1,6 @@
 'use client';
 
+import { apiUrl } from '@/lib/api-url';
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -68,7 +69,6 @@ export function AppShell({ role, navGroups, bottomNav, user, children }: Props) 
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
       const headers = { Authorization: `Bearer ${session.access_token}` };
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
       const questions = await fetch(`${apiUrl}/api/questions`, { headers });
       if (questions.ok) {
         const nextCount = (await questions.json()).items.filter((item: { is_resolved: boolean; reply_count: number }) => !item.is_resolved && item.reply_count === 0).length;
@@ -105,7 +105,7 @@ export function AppShell({ role, navGroups, bottomNav, user, children }: Props) 
     const refreshNotifications = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000'}/api/notifications`, { headers: { Authorization: `Bearer ${session.access_token}` } });
+      const response = await fetch(`${apiUrl}/api/notifications`, { headers: { Authorization: `Bearer ${session.access_token}` } });
       if (response.ok) setNotificationCount((await response.json()).items.filter((item: { read_at: string | null }) => !item.read_at).length);
     };
     window.addEventListener('wahamath-notifications-updated', refreshNotifications);

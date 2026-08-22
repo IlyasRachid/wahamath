@@ -1,5 +1,6 @@
 'use client';
 
+import { apiUrl } from '@/lib/api-url';
 import { useMemo, useState } from 'react';
 import { BookOpen, Eye, Loader2, Mail, Phone, ShieldCheck, ShieldOff, Trash2, Users } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
@@ -13,7 +14,6 @@ type Student = { id: string; display_name: string; status: string };
 type ClassRoster = { id: string; code: string; name: string; students: Student[] };
 type StudentDetails = { id: string; display_name: string; email: string | null; phone_number: string | null; status: string; created_at: string; classes: { id: string; code: string; name: string }[] };
 
-const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
 
 export function TeacherStudentRoster({ classes, onStudentDeleted, onStudentChanged }: { classes: ClassRoster[]; onStudentDeleted: (studentId: string) => void; onStudentChanged: () => Promise<void> }) {
   const [classId, setClassId] = useState('all');

@@ -1,5 +1,6 @@
 'use client';
 
+import { apiUrl } from '@/lib/api-url';
 import { useEffect, useMemo, useState } from 'react';
 import { FileText, HelpCircle } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
@@ -10,7 +11,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 type Exercise = { id: string; title: string; publication_status: string; published_at: string | null; classes?: { code: string } };
 type Question = { id: string; body: string; author: string; exercise_title: string; created_at: string };
 type Activity = { id: string; type: 'publish' | 'question'; title: string; detail: string; createdAt: string };
-const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
 function timeAgo(iso: string) { const seconds = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000); return seconds < 3600 ? `il y a ${Math.max(1, Math.floor(seconds / 60))} min` : seconds < 86400 ? `il y a ${Math.floor(seconds / 3600)} h` : `il y a ${Math.floor(seconds / 86400)} j`; }
 
 export default function TeacherActivityPage() {

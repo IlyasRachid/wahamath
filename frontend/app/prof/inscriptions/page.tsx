@@ -1,5 +1,6 @@
 'use client';
 
+import { apiUrl } from '@/lib/api-url';
 import { useEffect, useState } from 'react';
 import { Check, Clock3, UserRound, X } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
@@ -16,7 +17,6 @@ type PendingStudent = {
   requested_class: { code: string; name: string } | null;
 };
 
-const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
 
 export default function EnrollmentRequestsPage() {
   const cachedStudents = peekApiCache<{ items: PendingStudent[] }>('/api/admin/students/pending');

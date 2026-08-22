@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase/client';
+import { apiUrl } from '@/lib/api-url';
 
 type CacheTag = 'exercises' | 'classes' | 'questions' | 'comments' | 'notifications' | 'reports' | 'profile' | 'enrollments';
 type CacheEntry<T> = { data: T; expiresAt: number; tags: CacheTag[] };
@@ -6,7 +7,6 @@ type CacheEntry<T> = { data: T; expiresAt: number; tags: CacheTag[] };
 const cache = new Map<string, CacheEntry<unknown>>();
 const inFlightRequests = new Map<string, Promise<unknown>>();
 const dirtyTags = new Set<CacheTag>();
-const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
 const storageKey = 'wahamath-api-cache-v1';
 let hydratedForUserId: string | null = null;
 

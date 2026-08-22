@@ -1,0 +1,126 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* WahaMath palette - deep academic blue / indigo primary */
+    --background: 210 40% 98%;
+    --foreground: 222 47% 11%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    /* Primary: deep academic blue/indigo */
+    --primary: 224 76% 28%;
+    --primary-foreground: 210 40% 98%;
+
+    /* Secondary: soft blue-gray */
+    --secondary: 210 40% 94%;
+    --secondary-foreground: 222 47% 20%;
+
+    --muted: 210 40% 94%;
+    --muted-foreground: 215 16% 47%;
+
+    /* Accent: teal */
+    --accent: 173 58% 39%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
+
+    --success: 142 52% 38%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 28 80% 16%;
+
+    --border: 214 32% 88%;
+    --input: 214 32% 88%;
+    --ring: 224 76% 28%;
+
+    --chart-1: 224 76% 28%;
+    --chart-2: 173 58% 39%;
+    --chart-3: 38 92% 50%;
+    --chart-4: 142 52% 38%;
+    --chart-5: 280 50% 50%;
+
+    --radius: 0.625rem;
+
+    --sidebar: 222 47% 11%;
+    --sidebar-foreground: 210 40% 96%;
+    --sidebar-accent: 224 50% 20%;
+    --sidebar-accent-foreground: 210 40% 96%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .math-grid-bg {
+    background-image:
+      linear-gradient(to right, hsl(222 47% 11% / 0.04) 1px, transparent 1px),
+      linear-gradient(to bottom, hsl(222 47% 11% / 0.04) 1px, transparent 1px);
+    background-size: 28px 28px;
+  }
+  .math-grid-bg-sm {
+    background-image:
+      linear-gradient(to right, hsl(222 47% 11% / 0.05) 1px, transparent 1px),
+      linear-gradient(to bottom, hsl(222 47% 11% / 0.05) 1px, transparent 1px);
+    background-size: 18px 18px;
+  }
+  .math-dots-bg {
+    background-image: radial-gradient(hsl(222 47% 11% / 0.06) 1px, transparent 1px);
+    background-size: 22px 22px;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: hsl(215 16% 75%);
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(215 16% 65%);
+  background-clip: padding-box;
+}
+
+/* Smooth focus rings */
+:focus-visible {
+  outline: none;
+}

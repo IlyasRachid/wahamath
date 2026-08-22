@@ -1,0 +1,9 @@
+# Secrets used by the frontend and the API
+**/.env
+**/.env.local
+**/.env.*.local
+
+# Python runtime files
+**/__pycache__/
+**/.venv/
+.env.local

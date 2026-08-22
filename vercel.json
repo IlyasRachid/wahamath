@@ -5,6 +5,7 @@
     "backend": { "root": "backend/", "entrypoint": "app.main:app", "framework": "fastapi" }
   },
   "rewrites": [
+    { "source": "/health", "destination": { "service": "backend" } },
     { "source": "/api/(.*)", "destination": { "service": "backend" } },
     { "source": "/(.*)", "destination": { "service": "frontend" } }
   ]

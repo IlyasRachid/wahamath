@@ -8,7 +8,7 @@ This project has three deployed services:
 
 ## Before publishing
 
-The currently configured GitHub repository contains only the `frontend/` directory. Before deploying, consolidate the project into a single Git repository that contains `frontend/`, `backend/`, and `database/`. Never commit `.env.local`, SMTP keys, Supabase service-role keys, or other secrets.
+Use one Git repository containing `frontend/`, `backend/`, and `database/`. Never commit `.env.local`, SMTP keys, Supabase service-role keys, or other secrets.
 
 ## Render API
 

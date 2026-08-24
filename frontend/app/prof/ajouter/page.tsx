@@ -121,7 +121,7 @@ export default function AddExercisePage() {
         <div className="lg:col-span-2 space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Image de l'exercice</CardTitle>
+              <CardTitle className="text-base">Image de l’exercice</CardTitle>
             </CardHeader>
             <CardContent>
               <UploadDropzone onUploaded={setHasImage} onFileChange={setImageFile} />
@@ -133,7 +133,7 @@ export default function AddExercisePage() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Détails de l'exercice</CardTitle>
+              <CardTitle className="text-base">Détails de l’exercice</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
@@ -239,7 +239,7 @@ export default function AddExercisePage() {
               <div className="flex items-center justify-between rounded-lg border border-border bg-secondary/30 p-3">
                 <div>
                   <p className="text-sm font-medium text-foreground">Publier immédiatement</p>
-                  <p className="text-xs text-muted-foreground">Si désactivé, l'exercice sera enregistré comme brouillon.</p>
+                  <p className="text-xs text-muted-foreground">Si désactivé, l’exercice sera enregistré comme brouillon.</p>
                 </div>
                 <Switch checked={publish} onCheckedChange={setPublish} />
               </div>

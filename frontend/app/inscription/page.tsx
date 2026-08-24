@@ -12,6 +12,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import type { ClassCode } from '@/lib/types';
 import { supabase } from '@/lib/supabase/client';
+import { Turnstile } from '@/components/shared/turnstile';
 
 const classOptions: { code: ClassCode; title: string; description: string }[] = [
   { code: 'SM2', title: 'Sciences Mathématiques 2', description: 'Terminale — parcours mathématiques' },
@@ -28,6 +29,7 @@ type FormErrors = {
   confirmPassword?: string;
   classCode?: string;
   terms?: string;
+  captcha?: string;
   form?: string;
 };
 
@@ -52,6 +54,7 @@ export default function SignupPage() {
   const [errors, setErrors] = useState<FormErrors>({});
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState<SubmittedInfo | null>(null);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
 
   const clearError = (field: keyof FormErrors) => {
     if (errors[field]) setErrors((previous) => ({ ...previous, [field]: undefined }));
@@ -71,6 +74,7 @@ export default function SignupPage() {
     else if (password !== confirmPassword) nextErrors.confirmPassword = 'Les mots de passe ne correspondent pas.';
     if (!classCode) nextErrors.classCode = 'Veuillez sélectionner votre classe.';
     if (!terms) nextErrors.terms = 'Veuillez accepter le règlement.';
+    if (!captchaToken) nextErrors.captcha = 'Veuillez confirmer que vous n’êtes pas un robot.';
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
   };
@@ -84,10 +88,13 @@ export default function SignupPage() {
       email: email.trim(),
       password,
       options: {
+        captchaToken: captchaToken ?? undefined,
+        emailRedirectTo: `${window.location.origin}/confirmation-inscription`,
         data: {
           display_name: name.trim(),
           requested_class_code: classCode,
           phone_number: phone.trim(),
+          terms_version: '2026-08-23',
         },
       },
     });
@@ -110,9 +117,9 @@ export default function SignupPage() {
           <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-full bg-success/10 text-success">
             <CheckCircle2 className="h-7 w-7" />
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">Demande envoyée</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">Confirmez votre adresse e-mail</h1>
           <p className="mt-3 text-sm leading-relaxed text-muted-foreground sm:text-base">
-            Votre compte a bien été créé et votre demande est en attente de validation par votre professeur.
+            Un e-mail de confirmation a été envoyé à <span className="font-medium text-foreground">{submitted.email}</span>. Cliquez sur son lien pour confirmer votre adresse, puis votre demande sera envoyée au professeur pour validation.
           </p>
 
           <div className="mt-6 rounded-xl border border-border bg-secondary/35 p-4">
@@ -120,7 +127,7 @@ export default function SignupPage() {
               <p className="text-sm font-semibold text-foreground">Récapitulatif</p>
               <span className="inline-flex items-center gap-1.5 rounded-full border border-warning/25 bg-warning/10 px-2.5 py-1 text-xs font-medium text-warning-foreground">
                 <span className="h-1.5 w-1.5 rounded-full bg-warning" />
-                En attente de validation
+                Confirmation requise
               </span>
             </div>
             <dl className="space-y-2 text-sm">
@@ -130,7 +137,7 @@ export default function SignupPage() {
               <div className="flex justify-between gap-4"><dt className="text-muted-foreground">Téléphone</dt><dd className="font-medium text-foreground">{submitted.phone}</dd></div>
             </dl>
             <div className="mt-4 border-t border-border pt-3 text-xs leading-relaxed text-muted-foreground">
-              Vous pourrez accéder à WahaMath dès que votre compte aura été validé.
+              Après la confirmation de votre e-mail, vous verrez l’état d’attente de validation par le professeur.
             </div>
           </div>
 
@@ -194,7 +201,7 @@ export default function SignupPage() {
             <Label htmlFor="signup-confirm">Confirmer le mot de passe</Label>
             <div className="relative">
               <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input id="signup-confirm" type={showConfirmPassword ? 'text' : 'password'} value={confirmPassword} onChange={(event) => { setConfirmPassword(event.target.value); clearError('confirmPassword'); }} placeholder="Répétez le mot de passe" className={cn('pl-9 pr-9', errors.confirmPassword && 'border-destructive focus-visible:ring-destructive')} autoComplete="new-password" aria-invalid={!!errors.confirmPassword} />
+              <Input id="signup-confirm" type={showConfirmPassword ? 'text' : 'password'} value={confirmPassword} onChange={(event) => { setConfirmPassword(event.target.value); clearError('confirmPassword'); }} placeholder="Répétez-le" className={cn('pl-9 pr-9', errors.confirmPassword && 'border-destructive focus-visible:ring-destructive')} autoComplete="new-password" aria-invalid={!!errors.confirmPassword} />
               <PasswordToggle visible={showConfirmPassword} onClick={() => setShowConfirmPassword((visible) => !visible)} label={showConfirmPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'} />
             </div>
             {errors.confirmPassword && <FieldError message={errors.confirmPassword} />}
@@ -234,11 +241,13 @@ export default function SignupPage() {
           <Checkbox id="terms" checked={terms} onCheckedChange={(checked) => { setTerms(checked === true); clearError('terms'); }} className="mt-0.5" aria-invalid={!!errors.terms} />
           <div>
             <Label htmlFor="terms" className="cursor-pointer text-xs font-normal leading-relaxed text-muted-foreground">
-              J&apos;accepte le <button type="button" className="font-medium text-primary hover:underline">règlement et les règles de conduite de WahaMath</button>
+              J&apos;accepte le <Link href="/reglement" className="font-medium text-primary hover:underline">règlement et les règles de conduite de WahaMath</Link> ainsi que la <Link href="/confidentialite" className="font-medium text-primary hover:underline">politique de confidentialité</Link>.
             </Label>
             {errors.terms && <FieldError message={errors.terms} />}
           </div>
         </div>
+
+        <div><Turnstile onToken={(token) => { setCaptchaToken(token); clearError('captcha'); }} />{errors.captcha && <FieldError message={errors.captcha} />}</div>
 
         <Button type="submit" className="w-full" size="lg" disabled={loading}>
           {loading ? <><Loader2 className="h-4 w-4 animate-spin" /> Création en cours...</> : <>Créer mon compte <ArrowRight className="h-4 w-4" /></>}

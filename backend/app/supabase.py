@@ -1,10 +1,12 @@
 import uuid
 import asyncio
 import time
+import re
+import unicodedata
 from datetime import datetime, timezone
 
 import httpx
-from fastapi import Body, Depends, File, Form, Header, HTTPException, UploadFile, status
+from fastapi import Body, Depends, File, Form, Header, HTTPException, Query, UploadFile, status
 from pydantic import BaseModel
 
 from app.config import Settings, get_settings
@@ -13,6 +15,7 @@ ALLOWED_IMAGE_TYPES = {'image/png', 'image/jpeg', 'image/webp'}
 MAX_IMAGE_BYTES = 10 * 1024 * 1024
 SIGNED_IMAGE_CACHE_TTL_SECONDS = 540
 signed_image_cache: dict[str, tuple[str, float]] = {}
+WRITE_RATE_LIMITS = {'comment': (12, 60), 'report': (5, 300), 'exercise_upload': (12, 3600)}
 
 
 class CommentPayload(BaseModel):
@@ -40,6 +43,27 @@ class StudentManagementPayload(BaseModel):
     class_id: str | None = None
 
 
+class InstructionPayload(BaseModel):
+    body: str
+    exercise_id: str | None = None
+
+
+class InstructionMessagePayload(BaseModel):
+    body: str
+
+
+class ChapterPayload(BaseModel):
+    title: str
+
+
+class PasswordChangeDecisionPayload(BaseModel):
+    decision: str
+
+
+class PasswordChangePayload(BaseModel):
+    password: str
+
+
 async def create_notifications(client: httpx.AsyncClient, headers: dict[str, str], recipient_ids: list[str], notification_type: str, title: str, body: str, href: str) -> None:
     if not recipient_ids:
         return
@@ -47,10 +71,19 @@ async def create_notifications(client: httpx.AsyncClient, headers: dict[str, str
         'recipient_id': recipient_id, 'type': notification_type, 'title': title, 'body': body, 'href': href,
     } for recipient_id in recipient_ids])
 
+async def enforce_write_rate_limit(client: httpx.AsyncClient, settings: Settings, profile_id: str, action: str) -> None:
+    limit, window_seconds = WRITE_RATE_LIMITS[action]
+    response = await client.post('/rest/v1/rpc/consume_api_rate_limit', headers={'apikey': settings.supabase_secret_key, 'Content-Type': 'application/json'}, json={'p_subject_id': profile_id, 'p_action': action, 'p_limit': limit, 'p_window_seconds': window_seconds})
+    if response.is_error or not response.json():
+        raise HTTPException(status_code=503, detail='La protection anti-abus est temporairement indisponible. Réessayez dans un instant.')
+    result = response.json()[0]
+    if not result['allowed']:
+        raise HTTPException(status_code=429, detail=f"Trop de demandes. Réessayez dans {result['retry_after_seconds']} secondes.")
+
 
 def server_settings() -> Settings:
     settings = get_settings()
-    if not settings.supabase_url or not settings.supabase_service_role_key:
+    if not settings.supabase_url or not settings.supabase_secret_key:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail='L’API n’est pas encore configurée avec Supabase.',
@@ -66,7 +99,7 @@ async def require_active_user(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Authentification requise.')
 
     user_token = authorization.removeprefix('Bearer ').strip()
-    headers = {'apikey': settings.supabase_service_role_key, 'Authorization': f'Bearer {user_token}'}
+    headers = {'apikey': settings.supabase_secret_key, 'Authorization': f'Bearer {user_token}'}
     async with httpx.AsyncClient(base_url=settings.supabase_url, timeout=15) as client:
         user_response = await client.get('/auth/v1/user', headers=headers)
         if user_response.is_error:
@@ -76,8 +109,7 @@ async def require_active_user(
             '/rest/v1/profiles',
             params={'id': f'eq.{user_id}', 'select': 'id,display_name,role,status'},
             headers={
-                'apikey': settings.supabase_service_role_key,
-                'Authorization': f'Bearer {settings.supabase_service_role_key}',
+                'apikey': settings.supabase_secret_key,
             },
         )
         profile = profile_response.json()[0] if profile_response.is_success and profile_response.json() else None
@@ -99,6 +131,15 @@ async def get_profile(profile: dict[str, str] = Depends(require_active_user)) ->
     return profile
 
 
+async def get_data_revisions(profile: dict[str, str] = Depends(require_active_user), settings: Settings = Depends(server_settings)) -> dict:
+    headers = {'apikey': settings.supabase_secret_key}
+    async with httpx.AsyncClient(base_url=settings.supabase_url, timeout=15) as client:
+        response = await client.get('/rest/v1/data_revisions', params={'select': 'resource,updated_at'}, headers=headers)
+    if response.is_error:
+        raise HTTPException(status_code=502, detail='Impossible de vérifier les mises à jour.')
+    return {'items': response.json()}
+
+
 async def update_profile(
     payload: ProfilePayload,
     profile: dict[str, str] = Depends(require_active_user),
@@ -107,12 +148,109 @@ async def update_profile(
     name = payload.display_name.strip()
     if not 2 <= len(name) <= 50:
         raise HTTPException(status_code=400, detail='Le nom doit contenir entre 2 et 50 caractères.')
-    headers = {'apikey': settings.supabase_service_role_key, 'Authorization': f'Bearer {settings.supabase_service_role_key}', 'Prefer': 'return=representation'}
+    headers = {'apikey': settings.supabase_secret_key, 'Prefer': 'return=representation'}
     async with httpx.AsyncClient(base_url=settings.supabase_url, timeout=20) as client:
         response = await client.patch('/rest/v1/profiles', params={'id': f"eq.{profile['id']}"}, headers=headers, json={'display_name': name})
     if response.is_error or not response.json():
         raise HTTPException(status_code=502, detail='Impossible de mettre à jour le profil.')
     return response.json()[0]
+
+
+async def get_student_password_change_status(
+    profile: dict[str, str] = Depends(require_active_user),
+    settings: Settings = Depends(server_settings),
+) -> dict:
+    if profile['role'] != 'student':
+        raise HTTPException(status_code=403, detail='Cette demande est réservée aux élèves.')
+    headers = {'apikey': settings.supabase_secret_key}
+    async with httpx.AsyncClient(base_url=settings.supabase_url, timeout=20) as client:
+        response = await client.get(
+            '/rest/v1/password_change_requests',
+            params={'profile_id': f"eq.{profile['id']}", 'status': 'in.(pending,approved)', 'select': 'id,status,requested_at,reviewed_at', 'order': 'requested_at.desc', 'limit': '1'},
+            headers=headers,
+        )
+    if response.is_error:
+        raise HTTPException(status_code=502, detail='Impossible de charger la demande de changement de mot de passe.')
+    return response.json()[0] if response.json() else {'status': 'none'}
+
+
+async def request_student_password_change(
+    profile: dict[str, str] = Depends(require_active_user),
+    settings: Settings = Depends(server_settings),
+) -> dict:
+    if profile['role'] != 'student':
+        raise HTTPException(status_code=403, detail='Cette demande est réservée aux élèves.')
+    current = await get_student_password_change_status(profile, settings)
+    if current['status'] in {'pending', 'approved'}:
+        return current
+    headers = {'apikey': settings.supabase_secret_key, 'Content-Type': 'application/json', 'Prefer': 'return=representation'}
+    async with httpx.AsyncClient(base_url=settings.supabase_url, timeout=20) as client:
+        response = await client.post('/rest/v1/password_change_requests', headers=headers, json={'profile_id': profile['id']})
+    if response.is_error or not response.json():
+        raise HTTPException(status_code=502, detail='Impossible d’envoyer la demande de changement de mot de passe.')
+    return response.json()[0]
+
+
+async def list_student_password_change_requests(
+    _: dict[str, str] = Depends(require_teacher),
+    settings: Settings = Depends(server_settings),
+) -> dict:
+    headers = {'apikey': settings.supabase_secret_key}
+    async with httpx.AsyncClient(base_url=settings.supabase_url, timeout=20) as client:
+        response = await client.get(
+            '/rest/v1/password_change_requests',
+            params={'status': 'eq.pending', 'select': 'id,profile_id,requested_at,profiles(display_name)', 'order': 'requested_at.asc'},
+            headers=headers,
+        )
+    if response.is_error:
+        raise HTTPException(status_code=502, detail='Impossible de charger les demandes de mot de passe.')
+    return {'items': [{**request, 'student_name': (request.pop('profiles', None) or {}).get('display_name', 'Élève')} for request in response.json()]}
+
+
+async def decide_student_password_change_request(
+    request_id: str,
+    payload: PasswordChangeDecisionPayload,
+    teacher: dict[str, str] = Depends(require_teacher),
+    settings: Settings = Depends(server_settings),
+) -> dict:
+    if payload.decision not in {'approve', 'refuse'}:
+        raise HTTPException(status_code=400, detail='Décision invalide.')
+    headers = {'apikey': settings.supabase_secret_key, 'Content-Type': 'application/json', 'Prefer': 'return=representation'}
+    changes = {'status': 'approved' if payload.decision == 'approve' else 'refused', 'reviewed_at': datetime.now(timezone.utc).isoformat(), 'reviewed_by': teacher['id']}
+    async with httpx.AsyncClient(base_url=settings.supabase_url, timeout=20) as client:
+        response = await client.patch('/rest/v1/password_change_requests', params={'id': f'eq.{request_id}', 'status': 'eq.pending'}, headers=headers, json=changes)
+    if response.is_error:
+        raise HTTPException(status_code=502, detail='Impossible de traiter la demande de mot de passe.')
+    if not response.json():
+        raise HTTPException(status_code=404, detail='Cette demande est introuvable ou a déjà été traitée.')
+    return response.json()[0]
+
+
+async def change_student_password(
+    payload: PasswordChangePayload,
+    profile: dict[str, str] = Depends(require_active_user),
+    settings: Settings = Depends(server_settings),
+) -> dict:
+    if profile['role'] != 'student':
+        raise HTTPException(status_code=403, detail='Les professeurs gèrent leur mot de passe directement depuis leur session.')
+    password = payload.password
+    if len(password) < 8 or not any(character.isalpha() for character in password) or not any(character.isdigit() for character in password):
+        raise HTTPException(status_code=400, detail='Le mot de passe doit contenir au moins 8 caractères, une lettre et un chiffre.')
+    headers = {'apikey': settings.supabase_secret_key, 'Content-Type': 'application/json', 'Prefer': 'return=representation'}
+    async with httpx.AsyncClient(base_url=settings.supabase_url, timeout=20) as client:
+        request_response = await client.get('/rest/v1/password_change_requests', params={'profile_id': f"eq.{profile['id']}", 'status': 'eq.approved', 'select': 'id', 'order': 'requested_at.desc', 'limit': '1'}, headers=headers)
+        if request_response.is_error:
+            raise HTTPException(status_code=502, detail='Impossible de vérifier l’autorisation du professeur.')
+        if not request_response.json():
+            raise HTTPException(status_code=403, detail='Le professeur doit approuver votre demande avant ce changement.')
+        request_id = request_response.json()[0]['id']
+        update = await client.put(f"/auth/v1/admin/users/{profile['id']}", headers=headers, json={'password': password})
+        if update.is_error:
+            raise HTTPException(status_code=502, detail='Impossible de modifier le mot de passe.')
+        used = await client.patch('/rest/v1/password_change_requests', params={'id': f'eq.{request_id}', 'status': 'eq.approved'}, headers=headers, json={'status': 'used', 'used_at': datetime.now(timezone.utc).isoformat()})
+    if used.is_error:
+        raise HTTPException(status_code=502, detail='Le mot de passe a été modifié, mais la demande doit être vérifiée par un administrateur.')
+    return {'status': 'changed'}
 
 
 async def accessible_exercises(
@@ -121,8 +259,7 @@ async def accessible_exercises(
     exercise_id: str | None = None,
 ) -> list[dict]:
     service_headers = {
-        'apikey': settings.supabase_service_role_key,
-        'Authorization': f'Bearer {settings.supabase_service_role_key}',
+        'apikey': settings.supabase_secret_key,
     }
     async with httpx.AsyncClient(base_url=settings.supabase_url, timeout=30) as client:
         class_ids: list[str] | None = None
@@ -187,8 +324,7 @@ async def list_classes(
 ) -> dict[str, list[dict]]:
     """Return class content appropriate to the connected role."""
     headers = {
-        'apikey': settings.supabase_service_role_key,
-        'Authorization': f'Bearer {settings.supabase_service_role_key}',
+        'apikey': settings.supabase_secret_key,
     }
     async with httpx.AsyncClient(base_url=settings.supabase_url, timeout=30) as client:
         class_params = {'select': 'id,code,name,academic_year', 'order': 'code.asc'}
@@ -268,8 +404,7 @@ async def list_pending_students(
     settings: Settings = Depends(server_settings),
 ) -> dict[str, list[dict]]:
     headers = {
-        'apikey': settings.supabase_service_role_key,
-        'Authorization': f'Bearer {settings.supabase_service_role_key}',
+        'apikey': settings.supabase_secret_key,
     }
     async with httpx.AsyncClient(base_url=settings.supabase_url, timeout=20) as client:
         profiles_response = await client.get(
@@ -277,7 +412,7 @@ async def list_pending_students(
             params={
                 'role': 'eq.student',
                 'status': 'eq.pending',
-                'select': 'id,display_name,requested_class_id,created_at',
+                'select': 'id,display_name,phone_number,requested_class_id,created_at',
                 'order': 'created_at.asc',
             },
             headers=headers,
@@ -285,13 +420,30 @@ async def list_pending_students(
         classes_response = await client.get('/rest/v1/classes', params={'select': 'id,code,name'}, headers=headers)
         if profiles_response.is_error or classes_response.is_error:
             raise HTTPException(status_code=502, detail='Impossible de charger les demandes d’inscription.')
+        pending_profiles = profiles_response.json()
+        auth_responses = await asyncio.gather(*[
+            client.get(f"/auth/v1/admin/users/{profile['id']}", headers=headers)
+            for profile in pending_profiles
+        ])
+        if any(response.is_error for response in auth_responses):
+            raise HTTPException(status_code=502, detail='Impossible de vérifier les adresses e-mail des demandes.')
     classes_by_id = {class_item['id']: class_item for class_item in classes_response.json()}
+    confirmed_by_profile_id = {
+        profile['id']: bool(response.json().get('user', response.json()).get('email_confirmed_at'))
+        for profile, response in zip(pending_profiles, auth_responses)
+    }
+    email_by_profile_id = {
+        profile['id']: response.json().get('user', response.json()).get('email')
+        for profile, response in zip(pending_profiles, auth_responses)
+    }
     items = [
         {
             **profile,
             'requested_class': classes_by_id.get(profile['requested_class_id']),
+            'email_confirmed': confirmed_by_profile_id[profile['id']],
+            'email': email_by_profile_id[profile['id']],
         }
-        for profile in profiles_response.json()
+        for profile in pending_profiles
     ]
     return {'items': items}
 
@@ -305,8 +457,7 @@ async def decide_student_application(
     if decision not in {'approve', 'refuse'}:
         raise HTTPException(status_code=400, detail='Décision invalide.')
     headers = {
-        'apikey': settings.supabase_service_role_key,
-        'Authorization': f'Bearer {settings.supabase_service_role_key}',
+        'apikey': settings.supabase_secret_key,
         'Content-Type': 'application/json',
     }
     async with httpx.AsyncClient(base_url=settings.supabase_url, timeout=20) as client:
@@ -322,6 +473,12 @@ async def decide_student_application(
         if decision == 'approve':
             if not profile['requested_class_id']:
                 raise HTTPException(status_code=400, detail='Cette demande ne contient pas de classe sélectionnée.')
+            auth_response = await client.get(f'/auth/v1/admin/users/{profile_id}', headers=headers)
+            if auth_response.is_error:
+                raise HTTPException(status_code=502, detail='Impossible de vérifier l’adresse e-mail de cet élève.')
+            auth_user = auth_response.json().get('user', auth_response.json())
+            if not auth_user.get('email_confirmed_at'):
+                raise HTTPException(status_code=400, detail='Cet élève doit confirmer son adresse e-mail avant que son inscription puisse être acceptée.')
             membership_response = await client.post(
                 '/rest/v1/class_memberships',
                 params={'on_conflict': 'profile_id,class_id'},
@@ -351,7 +508,7 @@ async def get_student_details(
     settings: Settings = Depends(server_settings),
 ) -> dict:
     """Return private contact and class details for one student to the teacher."""
-    headers = {'apikey': settings.supabase_service_role_key, 'Authorization': f'Bearer {settings.supabase_service_role_key}'}
+    headers = {'apikey': settings.supabase_secret_key,}
     async with httpx.AsyncClient(base_url=settings.supabase_url, timeout=20) as client:
         profile_response = await client.get(
             '/rest/v1/profiles',
@@ -382,13 +539,230 @@ async def get_student_details(
     }
 
 
+async def send_student_instruction(
+    profile_id: str,
+    payload: InstructionPayload,
+    teacher: dict[str, str] = Depends(require_teacher),
+    settings: Settings = Depends(server_settings),
+) -> dict:
+    body = payload.body.strip()
+    if not 1 <= len(body) <= 500:
+        raise HTTPException(status_code=400, detail='L’instruction doit contenir entre 1 et 500 caractères.')
+    headers = {'apikey': settings.supabase_secret_key, 'Content-Type': 'application/json', 'Prefer': 'return=representation'}
+    async with httpx.AsyncClient(base_url=settings.supabase_url, timeout=20) as client:
+        student = await client.get('/rest/v1/profiles', params={'id': f'eq.{profile_id}', 'role': 'eq.student', 'status': 'eq.active', 'select': 'id'}, headers=headers)
+        if student.is_error or not student.json():
+            raise HTTPException(status_code=404, detail='Élève actif introuvable.')
+        if payload.exercise_id:
+            exercise = await client.get('/rest/v1/exercises', params={'id': f'eq.{payload.exercise_id}', 'publication_status': 'eq.publie', 'select': 'id'}, headers=headers)
+            if exercise.is_error or not exercise.json():
+                raise HTTPException(status_code=404, detail='Exercice introuvable ou non publié.')
+        thread_response = await client.post(
+            '/rest/v1/private_instruction_threads',
+            headers=headers,
+            json={'student_id': profile_id, 'teacher_id': teacher['id'], 'exercise_id': payload.exercise_id},
+        )
+        if thread_response.is_error or not thread_response.json():
+            raise HTTPException(status_code=502, detail='Impossible de créer la discussion privée.')
+        thread = thread_response.json()[0]
+        message_response = await client.post(
+            '/rest/v1/private_instruction_messages',
+            headers=headers,
+            json={'thread_id': thread['id'], 'author_id': teacher['id'], 'body': body},
+        )
+        response = await client.post(
+            '/rest/v1/notifications',
+            headers=headers,
+            json={'recipient_id': profile_id, 'type': 'instruction', 'title': 'Instruction du professeur', 'body': body, 'href': f"/eleve/instructions/{thread['id']}"},
+        )
+    if message_response.is_error or response.is_error:
+        raise HTTPException(status_code=502, detail='Impossible d’envoyer l’instruction.')
+    return {'status': 'sent', 'thread_id': thread['id']}
+
+
+async def get_instruction_thread(
+    thread_id: str,
+    profile: dict[str, str] = Depends(require_active_user),
+    settings: Settings = Depends(server_settings),
+) -> dict:
+    headers = {'apikey': settings.supabase_secret_key, 'Content-Type': 'application/json'}
+    async with httpx.AsyncClient(base_url=settings.supabase_url, timeout=20) as client:
+        thread_response = await client.get(
+            '/rest/v1/private_instruction_threads',
+            params={'id': f'eq.{thread_id}', 'select': 'id,student_id,teacher_id,exercise_id,status,created_at,closed_at,exercises(id,title)'},
+            headers=headers,
+        )
+        if thread_response.is_error or not thread_response.json():
+            raise HTTPException(status_code=404, detail='Discussion introuvable.')
+        thread = thread_response.json()[0]
+        if profile['id'] not in (thread['student_id'], thread['teacher_id']):
+            raise HTTPException(status_code=403, detail='Accès non autorisé à cette discussion.')
+        messages_response = await client.get(
+            '/rest/v1/private_instruction_messages',
+            params={'thread_id': f'eq.{thread_id}', 'select': 'id,author_id,body,created_at', 'order': 'created_at.asc'},
+            headers=headers,
+        )
+        if messages_response.is_error:
+            raise HTTPException(status_code=502, detail='Impossible de charger les messages.')
+    return {'thread': thread, 'messages': messages_response.json(), 'viewer_id': profile['id'], 'viewer_role': profile['role']}
+
+
+async def list_instruction_threads(
+    profile: dict[str, str] = Depends(require_active_user),
+    settings: Settings = Depends(server_settings),
+) -> dict:
+    participant_field = 'student_id' if profile['role'] == 'student' else 'teacher_id'
+    headers = {'apikey': settings.supabase_secret_key, 'Content-Type': 'application/json'}
+    async with httpx.AsyncClient(base_url=settings.supabase_url, timeout=20) as client:
+        response = await client.get(
+            '/rest/v1/private_instruction_threads',
+            params={participant_field: f"eq.{profile['id']}", 'select': 'id,student_id,teacher_id,exercise_id,status,created_at,closed_at,exercises(id,title)', 'order': 'created_at.desc'},
+            headers=headers,
+        )
+    if response.is_error:
+        raise HTTPException(status_code=502, detail='Impossible de charger les instructions.')
+    return {'items': response.json()}
+
+
+def chapter_slug(title: str) -> str:
+    normalized = unicodedata.normalize('NFKD', title).encode('ascii', 'ignore').decode('ascii').lower()
+    return re.sub(r'-+', '-', re.sub(r'[^a-z0-9]+', '-', normalized)).strip('-')
+
+
+async def create_chapter(
+    class_id: str,
+    payload: ChapterPayload,
+    _: dict[str, str] = Depends(require_teacher),
+    settings: Settings = Depends(server_settings),
+) -> dict:
+    title = ' '.join(payload.title.split())
+    if not 2 <= len(title) <= 100:
+        raise HTTPException(status_code=400, detail='Le titre du chapitre doit contenir entre 2 et 100 caractères.')
+    slug = chapter_slug(title)
+    if not slug:
+        raise HTTPException(status_code=400, detail='Le titre du chapitre contient des caractères non valides.')
+    headers = {'apikey': settings.supabase_secret_key, 'Content-Type': 'application/json', 'Prefer': 'return=representation'}
+    async with httpx.AsyncClient(base_url=settings.supabase_url, timeout=20) as client:
+        class_response = await client.get('/rest/v1/classes', params={'id': f'eq.{class_id}', 'select': 'id'}, headers=headers)
+        if class_response.is_error or not class_response.json():
+            raise HTTPException(status_code=404, detail='Classe introuvable.')
+        existing = await client.get('/rest/v1/chapters', params={'class_id': f'eq.{class_id}', 'slug': f'eq.{slug}', 'select': 'id'}, headers=headers)
+        if existing.is_error:
+            raise HTTPException(status_code=502, detail='Impossible de vérifier les chapitres.')
+        if existing.json():
+            raise HTTPException(status_code=409, detail='Un chapitre avec ce titre existe déjà dans cette classe.')
+        latest = await client.get('/rest/v1/chapters', params={'class_id': f'eq.{class_id}', 'select': 'sort_order', 'order': 'sort_order.desc', 'limit': '1'}, headers=headers)
+        if latest.is_error:
+            raise HTTPException(status_code=502, detail='Impossible de créer le chapitre.')
+        sort_order = (latest.json()[0]['sort_order'] + 1) if latest.json() else 0
+        response = await client.post('/rest/v1/chapters', headers=headers, json={'class_id': class_id, 'title': title, 'slug': slug, 'sort_order': sort_order})
+    if response.is_error or not response.json():
+        raise HTTPException(status_code=502, detail='Impossible de créer le chapitre.')
+    return response.json()[0]
+
+
+async def delete_chapter(
+    class_id: str,
+    chapter_id: str,
+    _: dict[str, str] = Depends(require_teacher),
+    settings: Settings = Depends(server_settings),
+) -> dict:
+    headers = {'apikey': settings.supabase_secret_key, 'Content-Type': 'application/json', 'Prefer': 'return=representation'}
+    async with httpx.AsyncClient(base_url=settings.supabase_url, timeout=20) as client:
+        chapter_response = await client.get('/rest/v1/chapters', params={'id': f'eq.{chapter_id}', 'class_id': f'eq.{class_id}', 'select': 'id,title'}, headers=headers)
+        if chapter_response.is_error or not chapter_response.json():
+            raise HTTPException(status_code=404, detail='Chapitre introuvable dans cette classe.')
+        published = await client.get('/rest/v1/exercises', params={'chapter_id': f'eq.{chapter_id}', 'publication_status': 'eq.publie', 'select': 'id', 'limit': '1'}, headers=headers)
+        if published.is_error:
+            raise HTTPException(status_code=502, detail='Impossible de vérifier les exercices du chapitre.')
+        if published.json():
+            raise HTTPException(status_code=409, detail='Ce chapitre contient au moins un exercice publié. Dépubliez-les ou déplacez-les avant de le supprimer.')
+        response = await client.delete('/rest/v1/chapters', params={'id': f'eq.{chapter_id}', 'class_id': f'eq.{class_id}'}, headers=headers)
+    if response.is_error:
+        raise HTTPException(status_code=502, detail='Impossible de supprimer le chapitre.')
+    return {'status': 'deleted'}
+
+
+async def post_instruction_message(
+    thread_id: str,
+    payload: InstructionMessagePayload,
+    profile: dict[str, str] = Depends(require_active_user),
+    settings: Settings = Depends(server_settings),
+) -> dict:
+    body = payload.body.strip()
+    if not 1 <= len(body) <= 2000:
+        raise HTTPException(status_code=400, detail='Le message doit contenir entre 1 et 2 000 caractères.')
+    headers = {'apikey': settings.supabase_secret_key, 'Content-Type': 'application/json', 'Prefer': 'return=representation'}
+    async with httpx.AsyncClient(base_url=settings.supabase_url, timeout=20) as client:
+        thread_response = await client.get('/rest/v1/private_instruction_threads', params={'id': f'eq.{thread_id}', 'select': 'id,student_id,teacher_id,status'}, headers=headers)
+        if thread_response.is_error or not thread_response.json():
+            raise HTTPException(status_code=404, detail='Discussion introuvable.')
+        thread = thread_response.json()[0]
+        if profile['id'] not in (thread['student_id'], thread['teacher_id']):
+            raise HTTPException(status_code=403, detail='Accès non autorisé à cette discussion.')
+        if thread['status'] != 'open':
+            raise HTTPException(status_code=400, detail='Cette discussion est fermée par le professeur.')
+        message_response = await client.post('/rest/v1/private_instruction_messages', headers=headers, json={'thread_id': thread_id, 'author_id': profile['id'], 'body': body})
+        if message_response.is_error or not message_response.json():
+            raise HTTPException(status_code=502, detail='Impossible d’envoyer le message.')
+        recipient_id = thread['teacher_id'] if profile['id'] == thread['student_id'] else thread['student_id']
+        recipient_href = f'/prof/instructions/{thread_id}' if profile['id'] == thread['student_id'] else f'/eleve/instructions/{thread_id}'
+        title = 'Réponse de l’élève' if profile['id'] == thread['student_id'] else 'Réponse du professeur'
+        await create_notifications(client, headers, [recipient_id], 'instruction', title, body, recipient_href)
+    return {'message': message_response.json()[0]}
+
+
+async def close_instruction_thread(
+    thread_id: str,
+    teacher: dict[str, str] = Depends(require_teacher),
+    settings: Settings = Depends(server_settings),
+) -> dict:
+    headers = {'apikey': settings.supabase_secret_key, 'Content-Type': 'application/json', 'Prefer': 'return=representation'}
+    async with httpx.AsyncClient(base_url=settings.supabase_url, timeout=20) as client:
+        thread_response = await client.get('/rest/v1/private_instruction_threads', params={'id': f'eq.{thread_id}', 'select': 'id,student_id,teacher_id,status'}, headers=headers)
+        if thread_response.is_error or not thread_response.json():
+            raise HTTPException(status_code=404, detail='Discussion introuvable.')
+        thread = thread_response.json()[0]
+        if thread['teacher_id'] != teacher['id']:
+            raise HTTPException(status_code=403, detail='Seul le professeur ayant créé cette instruction peut la fermer.')
+        if thread['status'] == 'closed':
+            return {'status': 'closed'}
+        response = await client.patch('/rest/v1/private_instruction_threads', params={'id': f'eq.{thread_id}'}, headers=headers, json={'status': 'closed', 'closed_at': datetime.now(timezone.utc).isoformat(), 'closed_by': teacher['id']})
+        if response.is_error:
+            raise HTTPException(status_code=502, detail='Impossible de fermer la discussion.')
+        await create_notifications(client, headers, [thread['student_id']], 'instruction', 'Discussion clôturée', 'Le professeur a clôturé cette instruction.', f'/eleve/instructions/{thread_id}')
+    return {'status': 'closed'}
+
+
+async def reopen_instruction_thread(
+    thread_id: str,
+    teacher: dict[str, str] = Depends(require_teacher),
+    settings: Settings = Depends(server_settings),
+) -> dict:
+    headers = {'apikey': settings.supabase_secret_key, 'Content-Type': 'application/json', 'Prefer': 'return=representation'}
+    async with httpx.AsyncClient(base_url=settings.supabase_url, timeout=20) as client:
+        thread_response = await client.get('/rest/v1/private_instruction_threads', params={'id': f'eq.{thread_id}', 'select': 'id,student_id,teacher_id,status'}, headers=headers)
+        if thread_response.is_error or not thread_response.json():
+            raise HTTPException(status_code=404, detail='Discussion introuvable.')
+        thread = thread_response.json()[0]
+        if thread['teacher_id'] != teacher['id']:
+            raise HTTPException(status_code=403, detail='Seul le professeur ayant créé cette instruction peut la rouvrir.')
+        if thread['status'] == 'open':
+            return {'status': 'open'}
+        response = await client.patch('/rest/v1/private_instruction_threads', params={'id': f'eq.{thread_id}'}, headers=headers, json={'status': 'open', 'closed_at': None, 'closed_by': None})
+        if response.is_error:
+            raise HTTPException(status_code=502, detail='Impossible de rouvrir la discussion.')
+        await create_notifications(client, headers, [thread['student_id']], 'instruction', 'Discussion rouverte', 'Le professeur a rouvert cette instruction.', f'/eleve/instructions/{thread_id}')
+    return {'status': 'open'}
+
+
 async def delete_student(
     profile_id: str,
     _: dict[str, str] = Depends(require_teacher),
     settings: Settings = Depends(server_settings),
 ) -> dict[str, str]:
     """Permanently remove a student Auth account and its cascade-linked data."""
-    headers = {'apikey': settings.supabase_service_role_key, 'Authorization': f'Bearer {settings.supabase_service_role_key}'}
+    headers = {'apikey': settings.supabase_secret_key,}
     async with httpx.AsyncClient(base_url=settings.supabase_url, timeout=20) as client:
         profile_response = await client.get(
             '/rest/v1/profiles',
@@ -414,7 +788,7 @@ async def manage_student(
 ) -> dict[str, str]:
     if payload.action not in {'suspend', 'activate', 'move_class'}:
         raise HTTPException(status_code=400, detail='Action de gestion invalide.')
-    headers = {'apikey': settings.supabase_service_role_key, 'Authorization': f'Bearer {settings.supabase_service_role_key}', 'Content-Type': 'application/json'}
+    headers = {'apikey': settings.supabase_secret_key, 'Content-Type': 'application/json'}
     async with httpx.AsyncClient(base_url=settings.supabase_url, timeout=20) as client:
         student_response = await client.get('/rest/v1/profiles', params={'id': f'eq.{profile_id}', 'role': 'eq.student', 'select': 'id'}, headers=headers)
         if student_response.is_error:
@@ -431,15 +805,9 @@ async def manage_student(
 
         if not payload.class_id:
             raise HTTPException(status_code=400, detail='Veuillez sélectionner une classe.')
-        class_response = await client.get('/rest/v1/classes', params={'id': f'eq.{payload.class_id}', 'select': 'id'}, headers=headers)
-        if class_response.is_error or not class_response.json():
-            raise HTTPException(status_code=404, detail='Classe introuvable.')
-        remove_response = await client.delete('/rest/v1/class_memberships', params={'profile_id': f'eq.{profile_id}'}, headers=headers)
-        if remove_response.is_error:
-            raise HTTPException(status_code=502, detail='Impossible de retirer l’élève de son ancienne classe.')
-        add_response = await client.post('/rest/v1/class_memberships', params={'on_conflict': 'profile_id,class_id'}, headers={**headers, 'Prefer': 'resolution=merge-duplicates'}, json={'profile_id': profile_id, 'class_id': payload.class_id})
-        if add_response.is_error:
-            raise HTTPException(status_code=502, detail='Impossible d’inscrire l’élève dans la nouvelle classe.')
+        move_response = await client.post('/rest/v1/rpc/move_student_to_class', headers=headers, json={'p_profile_id': profile_id, 'p_class_id': payload.class_id})
+        if move_response.is_error:
+            raise HTTPException(status_code=502, detail='Impossible de changer la classe de l’élève.')
     return {'status': 'moved'}
 
 
@@ -450,7 +818,7 @@ async def get_exercise_comments(
 ) -> dict[str, list[dict]]:
     if not await accessible_exercises(profile, settings, exercise_id):
         raise HTTPException(status_code=404, detail='Exercice introuvable.')
-    headers = {'apikey': settings.supabase_service_role_key, 'Authorization': f'Bearer {settings.supabase_service_role_key}'}
+    headers = {'apikey': settings.supabase_secret_key,}
     params = {
         'exercise_id': f'eq.{exercise_id}',
         'select': 'id,parent_id,body,is_pinned,is_resolved,is_locked,created_at,profiles(display_name,role)',
@@ -474,8 +842,7 @@ async def list_questions(
 ) -> dict[str, list[dict]]:
     """Return root discussion messages as question threads the user may access."""
     headers = {
-        'apikey': settings.supabase_service_role_key,
-        'Authorization': f'Bearer {settings.supabase_service_role_key}',
+        'apikey': settings.supabase_secret_key,
     }
     async with httpx.AsyncClient(base_url=settings.supabase_url, timeout=30) as client:
         exercise_params = {'select': 'id'}
@@ -511,22 +878,35 @@ async def list_questions(
         if response.is_error:
             raise HTTPException(status_code=502, detail='Impossible de charger les questions.')
 
+        questions = response.json()
+        if not questions:
+            return {'items': []}
+        question_ids = [question['id'] for question in questions]
+        replies = await client.get(
+            '/rest/v1/comments',
+            params={
+                'parent_id': f"in.({','.join(question_ids)})",
+                'status': 'eq.visible',
+                'select': 'parent_id',
+            },
+            headers=headers,
+        )
+        if replies.is_error:
+            raise HTTPException(status_code=502, detail='Impossible de charger les questions.')
+        reply_counts: dict[str, int] = {}
+        for reply in replies.json():
+            parent_id = reply['parent_id']
+            reply_counts[parent_id] = reply_counts.get(parent_id, 0) + 1
+
         items = []
-        for question in response.json():
-            replies = await client.get(
-                '/rest/v1/comments',
-                params={'parent_id': f"eq.{question['id']}", 'status': 'eq.visible', 'select': 'id'},
-                headers=headers,
-            )
-            if replies.is_error:
-                raise HTTPException(status_code=502, detail='Impossible de charger les questions.')
+        for question in questions:
             author = question.pop('profiles', None) or {}
             exercise = question.pop('exercises', None) or {}
             items.append({
                 **question,
                 'author': author.get('display_name', 'Utilisateur'),
                 'exercise_title': exercise.get('title', 'Exercice'),
-                'reply_count': len(replies.json()),
+                'reply_count': reply_counts.get(question['id'], 0),
             })
     return {'items': items}
 
@@ -535,7 +915,7 @@ async def list_notifications(
     profile: dict[str, str] = Depends(require_active_user),
     settings: Settings = Depends(server_settings),
 ) -> dict[str, list[dict]]:
-    headers = {'apikey': settings.supabase_service_role_key, 'Authorization': f'Bearer {settings.supabase_service_role_key}'}
+    headers = {'apikey': settings.supabase_secret_key,}
     async with httpx.AsyncClient(base_url=settings.supabase_url, timeout=20) as client:
         response = await client.get('/rest/v1/notifications', params={'recipient_id': f"eq.{profile['id']}", 'select': 'id,type,title,body,href,read_at,created_at', 'order': 'created_at.desc'}, headers=headers)
     if response.is_error:
@@ -545,18 +925,28 @@ async def list_notifications(
 
 async def mark_notifications_read(
     notification_id: str | None = None,
+    notification_type: str | None = None,
     profile: dict[str, str] = Depends(require_active_user),
     settings: Settings = Depends(server_settings),
 ) -> dict[str, str]:
-    headers = {'apikey': settings.supabase_service_role_key, 'Authorization': f'Bearer {settings.supabase_service_role_key}'}
+    headers = {'apikey': settings.supabase_secret_key,}
     params = {'recipient_id': f"eq.{profile['id']}", 'read_at': 'is.null'}
     if notification_id:
         params['id'] = f'eq.{notification_id}'
+    if notification_type:
+        params['type'] = f'eq.{notification_type}'
     async with httpx.AsyncClient(base_url=settings.supabase_url, timeout=20) as client:
         response = await client.patch('/rest/v1/notifications', params=params, headers=headers, json={'read_at': datetime.now(timezone.utc).isoformat()})
     if response.is_error:
         raise HTTPException(status_code=502, detail='Impossible de mettre à jour les notifications.')
     return {'status': 'read'}
+
+
+async def mark_instruction_notifications_read(
+    profile: dict[str, str] = Depends(require_active_user),
+    settings: Settings = Depends(server_settings),
+) -> dict[str, str]:
+    return await mark_notifications_read(notification_type='instruction', profile=profile, settings=settings)
 
 
 async def create_comment(
@@ -570,13 +960,13 @@ async def create_comment(
     if not await accessible_exercises(profile, settings, exercise_id):
         raise HTTPException(status_code=404, detail='Exercice introuvable.')
     headers = {
-        'apikey': settings.supabase_service_role_key,
-        'Authorization': f'Bearer {settings.supabase_service_role_key}',
+        'apikey': settings.supabase_secret_key,
         'Content-Type': 'application/json',
         'Prefer': 'return=representation',
     }
     parent_author_id: str | None = None
     async with httpx.AsyncClient(base_url=settings.supabase_url, timeout=20) as client:
+        await enforce_write_rate_limit(client, settings, profile['id'], 'comment')
         if payload.parent_id:
             parent = await client.get('/rest/v1/comments', params={'id': f'eq.{payload.parent_id}', 'exercise_id': f'eq.{exercise_id}', 'select': 'id,is_locked,author_id'}, headers=headers)
             if not parent.is_success or not parent.json() or parent.json()[0]['is_locked']:
@@ -601,16 +991,16 @@ async def moderate_comment(
     teacher: dict[str, str] = Depends(require_teacher),
     settings: Settings = Depends(server_settings),
 ) -> dict:
-    if payload.action not in {'hide', 'pin', 'resolve', 'lock'}:
+    if payload.action not in {'hide', 'restore', 'pin', 'resolve', 'lock'}:
         raise HTTPException(status_code=400, detail='Action de modération invalide.')
-    headers = {'apikey': settings.supabase_service_role_key, 'Authorization': f'Bearer {settings.supabase_service_role_key}', 'Content-Type': 'application/json', 'Prefer': 'return=representation'}
+    headers = {'apikey': settings.supabase_secret_key, 'Content-Type': 'application/json', 'Prefer': 'return=representation'}
     async with httpx.AsyncClient(base_url=settings.supabase_url, timeout=20) as client:
         current = await client.get('/rest/v1/comments', params={'id': f'eq.{comment_id}', 'select': 'id,status,is_pinned,is_resolved,is_locked'}, headers=headers)
         if not current.is_success or not current.json():
             raise HTTPException(status_code=404, detail='Commentaire introuvable.')
         comment = current.json()[0]
         comment_ids = [comment_id]
-        if payload.action == 'hide':
+        if payload.action in {'hide', 'restore'}:
             # A discussion can contain replies at more than one level. Gather
             # the complete subtree so hiding its root never leaves orphaned,
             # visible replies in the exercise or questions pages.
@@ -626,12 +1016,13 @@ async def moderate_comment(
                 pending_parent_ids = [child['id'] for child in children.json()]
                 comment_ids.extend(pending_parent_ids)
         changes = {
-            'hide': {'status': 'hidden' if comment['status'] == 'visible' else 'visible'},
+            'hide': {'status': 'hidden'},
+            'restore': {'status': 'visible'},
             'pin': {'is_pinned': not comment['is_pinned']},
             'resolve': {'is_resolved': not comment['is_resolved']},
             'lock': {'is_locked': not comment['is_locked']},
         }[payload.action]
-        target_ids = comment_ids if payload.action == 'hide' else [comment_id]
+        target_ids = comment_ids if payload.action in {'hide', 'restore'} else [comment_id]
         updated = await client.patch('/rest/v1/comments', params={'id': f"in.({','.join(target_ids)})"}, headers=headers, json=changes)
         if payload.action == 'hide':
             await client.patch('/rest/v1/comment_reports', params={'comment_id': f"in.({','.join(target_ids)})", 'reviewed_at': 'is.null'}, headers=headers, json={'reviewed_at': datetime.now(timezone.utc).isoformat(), 'reviewed_by': teacher['id']})
@@ -640,15 +1031,16 @@ async def moderate_comment(
     return updated.json()[0]
 
 async def dismiss_report(report_id: str, teacher: dict[str, str] = Depends(require_teacher), settings: Settings = Depends(server_settings)) -> dict:
-    h={'apikey':settings.supabase_service_role_key,'Authorization':f'Bearer {settings.supabase_service_role_key}','Content-Type':'application/json'}
+    h={'apikey':settings.supabase_secret_key,'Content-Type':'application/json'}
     async with httpx.AsyncClient(base_url=settings.supabase_url, timeout=20) as client:
         r=await client.patch('/rest/v1/comment_reports',params={'id':f'eq.{report_id}','reviewed_at':'is.null'},headers=h,json={'reviewed_at':datetime.now(timezone.utc).isoformat(),'reviewed_by':teacher['id']})
     if r.is_error: raise HTTPException(status_code=502,detail='Impossible de fermer ce signalement.')
     return {'status':'dismissed'}
 
 async def report_comment(comment_id: str, payload: ReportPayload, profile: dict[str, str] = Depends(require_active_user), settings: Settings = Depends(server_settings)) -> dict:
-    headers={'apikey':settings.supabase_service_role_key,'Authorization':f'Bearer {settings.supabase_service_role_key}','Content-Type':'application/json','Prefer':'return=representation'}
+    headers={'apikey':settings.supabase_secret_key,'Content-Type':'application/json','Prefer':'return=representation'}
     async with httpx.AsyncClient(base_url=settings.supabase_url, timeout=20) as client:
+        await enforce_write_rate_limit(client, settings, profile['id'], 'report')
         response=await client.post('/rest/v1/comment_reports',headers=headers,json={'comment_id':comment_id,'reporter_id':profile['id'],'reason':payload.reason[:500]})
         if response.status_code == 409:
             response = await client.patch(
@@ -664,17 +1056,73 @@ async def report_comment(comment_id: str, payload: ReportPayload, profile: dict[
     return {'status':'reported'}
 
 async def list_reports(_: dict[str, str] = Depends(require_teacher), settings: Settings = Depends(server_settings)) -> dict:
-    h={'apikey':settings.supabase_service_role_key,'Authorization':f'Bearer {settings.supabase_service_role_key}'}
+    h={'apikey':settings.supabase_secret_key,}
     async with httpx.AsyncClient(base_url=settings.supabase_url, timeout=20) as client:
         reports=await client.get('/rest/v1/comment_reports',params={'reviewed_at':'is.null','select':'id,comment_id,reason,created_at','order':'created_at.asc'},headers=h)
         if reports.is_error: raise HTTPException(status_code=502,detail='Impossible de charger les signalements.')
+        report_items = reports.json()
+        comment_ids = [report['comment_id'] for report in report_items]
+        comments_by_id: dict[str, dict] = {}
+        if comment_ids:
+            comments = await client.get(
+                '/rest/v1/comments',
+                params={
+                    'id': f"in.({','.join(comment_ids)})",
+                    'select': 'id,body,profiles(display_name),exercises(title)',
+                },
+                headers=h,
+            )
+            if comments.is_error:
+                raise HTTPException(status_code=502, detail='Impossible de charger les signalements.')
+            comments_by_id = {comment['id']: comment for comment in comments.json()}
         items=[]
-        for report in reports.json():
-            comment=await client.get('/rest/v1/comments',params={'id':f"eq.{report['comment_id']}",'select':'id,body,profiles(display_name),exercises(title)'},headers=h)
-            data=comment.json()[0] if comment.is_success and comment.json() else {}
+        for report in report_items:
+            data = comments_by_id.get(report['comment_id'], {})
             author=data.get('profiles') or {}; exercise=data.get('exercises') or {}
             items.append({**report,'comment':data.get('body','Commentaire supprimé'),'author':author.get('display_name','Utilisateur'),'exercise_title':exercise.get('title','Exercice')})
     return {'items':items}
+
+
+async def list_hidden_comments(
+    limit: int = Query(default=10, ge=1, le=50),
+    offset: int = Query(default=0, ge=0),
+    _: dict[str, str] = Depends(require_teacher),
+    settings: Settings = Depends(server_settings),
+) -> dict:
+    """Return comments hidden by a teacher so a moderation decision can be reversed."""
+    headers = {
+        'apikey': settings.supabase_secret_key,
+        'Prefer': 'count=exact',
+        'Range': f'{offset}-{offset + limit - 1}',
+    }
+    async with httpx.AsyncClient(base_url=settings.supabase_url, timeout=20) as client:
+        response = await client.get(
+            '/rest/v1/comments',
+            params={
+                'status': 'eq.hidden',
+                'select': 'id,body,created_at,profiles(display_name),exercises(title)',
+                'order': 'created_at.desc',
+            },
+            headers=headers,
+        )
+    if response.is_error:
+        raise HTTPException(status_code=502, detail='Impossible de charger les commentaires masqués.')
+
+    items = []
+    for comment in response.json():
+        author = comment.pop('profiles', None) or {}
+        exercise = comment.pop('exercises', None) or {}
+        items.append({
+            **comment,
+            'author': author.get('display_name', 'Utilisateur'),
+            'exercise_title': exercise.get('title', 'Exercice'),
+        })
+    content_range = response.headers.get('content-range', '')
+    try:
+        total = int(content_range.rsplit('/', 1)[1])
+    except (IndexError, ValueError):
+        total = offset + len(items)
+    return {'items': items, 'next_offset': offset + len(items), 'has_more': offset + len(items) < total}
 
 
 async def create_exercise(
@@ -706,10 +1154,10 @@ async def create_exercise(
         raise HTTPException(status_code=400, detail='Les tags sont invalides.')
 
     service_headers = {
-        'apikey': settings.supabase_service_role_key,
-        'Authorization': f'Bearer {settings.supabase_service_role_key}',
+        'apikey': settings.supabase_secret_key,
     }
     async with httpx.AsyncClient(base_url=settings.supabase_url, timeout=30) as client:
+        await enforce_write_rate_limit(client, settings, teacher['id'], 'exercise_upload')
         class_response = await client.get('/rest/v1/classes', params={'code': f'eq.{class_code}', 'select': 'id'}, headers=service_headers)
         selected_class = class_response.json()[0] if class_response.is_success and class_response.json() else None
         if not selected_class:
@@ -786,7 +1234,7 @@ async def update_exercise(
         raise HTTPException(status_code=400, detail='Utilisez une image PNG, JPEG ou WebP.')
 
     parsed_tags = [tag.strip().lower() for tag in tags.split(',') if tag.strip()][:10]
-    headers = {'apikey': settings.supabase_service_role_key, 'Authorization': f'Bearer {settings.supabase_service_role_key}'}
+    headers = {'apikey': settings.supabase_secret_key,}
     new_image_path: str | None = None
     async with httpx.AsyncClient(base_url=settings.supabase_url, timeout=30) as client:
         current_response = await client.get(
@@ -874,8 +1322,7 @@ async def update_exercise_publication(
         raise HTTPException(status_code=400, detail='Statut de publication invalide.')
 
     headers = {
-        'apikey': settings.supabase_service_role_key,
-        'Authorization': f'Bearer {settings.supabase_service_role_key}',
+        'apikey': settings.supabase_secret_key,
         'Prefer': 'return=representation',
     }
     update = {'publication_status': payload.publication_status}
@@ -910,8 +1357,7 @@ async def delete_exercise(
     settings: Settings = Depends(server_settings),
 ) -> dict[str, str]:
     headers = {
-        'apikey': settings.supabase_service_role_key,
-        'Authorization': f'Bearer {settings.supabase_service_role_key}',
+        'apikey': settings.supabase_secret_key,
         'Prefer': 'return=representation',
     }
     async with httpx.AsyncClient(base_url=settings.supabase_url, timeout=30) as client:

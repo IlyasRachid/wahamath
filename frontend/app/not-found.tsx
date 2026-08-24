@@ -10,10 +10,10 @@ export default function NotFound() {
       </div>
       <h1 className="text-2xl font-bold text-foreground">Page introuvable</h1>
       <p className="mt-1 max-w-sm text-sm text-muted-foreground">
-        La page que vous recherchez n'existe pas ou a été déplacée.
+        La page que vous recherchez n’existe pas ou a été déplacée.
       </p>
       <Link href="/" className="mt-6">
-        <Button>Retour à l'accueil</Button>
+        <Button>Retour à l’accueil</Button>
       </Link>
     </div>
   );

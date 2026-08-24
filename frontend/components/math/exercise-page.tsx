@@ -142,13 +142,13 @@ function VariantFunctionRational() {
         <T x={60} y={185}>Déterminer le domaine de définition D_f de la fonction f.</T>
       </Q>
       <Q x={40} y={215} n="2.">
-        <T x={60} y={215}>Calculer les limites de f aux bornes de D_f. En déduire l'existence</T>
-        <T x={60} y={228}>d'asymptotes éventuelles que l'on précisera.</T>
+        <T x={60} y={215}>Calculer les limites de f aux bornes de D_f. En déduire l’existence</T>
+        <T x={60} y={228}>d’asymptotes éventuelles que l’on précisera.</T>
       </Q>
       <Q x={40} y={255} n="3.">
         <T x={60} y={255}>Montrer que pour tout x ∈ D_f :</T>
-        <ItalicT x={90} y={275} s={11}>f'(x) = (5x² − 2x + 3) / (x² − 1)²</ItalicT>
-        <T x={60} y={295}>Étudier le signe de f'(x) et dresser le tableau de variations de f.</T>
+        <ItalicT x={90} y={275} s={11}>f′(x) = (5x² − 2x + 3) / (x² − 1)²</ItalicT>
+        <T x={60} y={295}>Étudier le signe de f′(x) et dresser le tableau de variations de f.</T>
       </Q>
       <Q x={40} y={325} n="4.">
         <T x={60} y={325}>Tracer la courbe (C_f) ainsi que ses asymptotes.</T>
@@ -211,8 +211,8 @@ function VariantDerivation() {
       <T x={40} y={110} s={9}>Soit la fonction g définie sur ℝ par:</T>
       <ItalicT x={140} y={132} s={12}>g(x) = x³ − 3x² + 2</ItalicT>
 
-      <Q x={40} y={162} n="1."><T x={60} y={162}>Calculer g'(x) et g''(x).</T></Q>
-      <Q x={40} y={190} n="2."><T x={60} y={190}>Étudier le signe de g'(x) sur ℝ.</T></Q>
+      <Q x={40} y={162} n="1."><T x={60} y={162}>Calculer g′(x) et g′′(x).</T></Q>
+      <Q x={40} y={190} n="2."><T x={60} y={190}>Étudier le signe de g′(x) sur ℝ.</T></Q>
       <Q x={40} y={218} n="3.">
         <T x={60} y={218}>Dresser le tableau de variations de g.</T>
       </Q>
@@ -229,7 +229,7 @@ function VariantDerivation() {
         <line x1={480} y1={290} x2={480} y2={370} />
       </g>
       <T x={100} y={312} s={8}>x</T>
-      <T x={100} y={352} s={8}>g'(x)</T>
+      <T x={100} y={352} s={8}>g′(x)</T>
       <ItalicT x={140} y={312} s={8}>−∞</ItalicT>
       <ItalicT x={270} y={312} s={8}>0</ItalicT>
       <ItalicT x={400} y={312} s={8}>2</ItalicT>
@@ -251,9 +251,9 @@ function VariantProbabilities() {
       <T x={40} y={110} s={9}>Dans un lycée, 60% des élèves sont des filles. Parmi les filles, 30% portent</T>
       <T x={40} y={124} s={9}>des lunettes, et parmi les garçons, 20% portent des lunettes.</T>
 
-      <Q x={40} y={152} n="1."><T x={60} y={152}>On choisit un élève au hasard. Quelle est la probabilité qu'il porte des lunettes ?</T></Q>
-      <Q x={40} y={180} n="2."><T x={60} y={180}>Sachant que l'élève porte des lunettes, quelle est la probabilité que ce soit une fille ?</T></Q>
-      <Q x={40} y={208} n="3."><T x={60} y={208}>On choisit 3 élèves indépendamment. Probabilité qu'au moins un porte des lunettes ?</T></Q>
+      <Q x={40} y={152} n="1."><T x={60} y={152}>On choisit un élève au hasard. Quelle est la probabilité qu’il porte des lunettes ?</T></Q>
+      <Q x={40} y={180} n="2."><T x={60} y={180}>Sachant que l’élève porte des lunettes, quelle est la probabilité que ce soit une fille ?</T></Q>
+      <Q x={40} y={208} n="3."><T x={60} y={208}>On choisit 3 élèves indépendamment. Probabilité qu’au moins un porte des lunettes ?</T></Q>
 
       {/* tree diagram */}
       <g stroke={INK} strokeWidth="0.7" opacity="0.7">
@@ -278,10 +278,10 @@ function VariantProbabilities() {
 function VariantEquationDiff() {
   return (
     <g>
-      <T x={40} y={110} s={9}>On considère l'équation différentielle (E):</T>
-      <ItalicT x={160} y={132} s={12}>y' − 2y = 3</ItalicT>
+      <T x={40} y={110} s={9}>On considère l’équation différentielle (E):</T>
+      <ItalicT x={160} y={132} s={12}>y′ − 2y = 3</ItalicT>
 
-      <Q x={40} y={162} n="1."><T x={60} y={162}>Résoudre l'équation homogène (E₀): y' − 2y = 0.</T></Q>
+      <Q x={40} y={162} n="1."><T x={60} y={162}>Résoudre l’équation homogène (E₀): y′ − 2y = 0.</T></Q>
       <Q x={40} y={190} n="2."><T x={60} y={190}>Déterminer une solution particulière constante de (E).</T></Q>
       <Q x={40} y={218} n="3."><T x={60} y={218}>En déduire la solution générale de (E).</T></Q>
       <Q x={40} y={246} n="4."><T x={60} y={246}>Déterminer la solution unique vérifiant y(0) = 1.</T></Q>
@@ -296,13 +296,13 @@ function VariantEquationDiff() {
 function VariantGeometry() {
   return (
     <g>
-      <T x={40} y={110} s={9}>Dans l'espace muni d'un repère orthonormé (O; i, j, k), on donne les points:</T>
+      <T x={40} y={110} s={9}>Dans l’espace muni d’un repère orthonormé (O; i, j, k), on donne les points:</T>
       <ItalicT x={80} y={132} s={10}>A(1; 0; 2), B(3; 1; −1), C(0; 2; 1)</ItalicT>
 
       <Q x={40} y={162} n="1."><T x={60} y={162}>Calculer les coordonnées des vecteurs AB et AC.</T></Q>
       <Q x={40} y={190} n="2."><T x={60} y={190}>Calculer le produit vectoriel AB ∧ AC.</T></Q>
       <Q x={40} y={218} n="3."><T x={60} y={218}>En déduire une équation cartésienne du plan (ABC).</T></Q>
-      <Q x={40} y={246} n="4."><T x={60} y={246}>Calculer l'aire du triangle ABC.</T></Q>
+      <Q x={40} y={246} n="4."><T x={60} y={246}>Calculer l’aire du triangle ABC.</T></Q>
 
       {/* 3D axes */}
       <g stroke={INK} strokeWidth="0.8" fill="none" opacity="0.7">
@@ -329,7 +329,7 @@ function VariantLimites() {
       <ItalicT x={160} y={132} s={12}>h(x) = x·sin(1/x)</ItalicT>
 
       <Q x={40} y={162} n="1."><T x={60} y={162}>Montrer que pour tout x ∈ ℝ*, −1 ≤ sin(1/x) ≤ 1.</T></Q>
-      <Q x={40} y={190} n="2."><T x={60} y={190}>En déduire, à l'aide du théorème des gendarmes, que lim h(x) = 0 quand x→+∞.</T></Q>
+      <Q x={40} y={190} n="2."><T x={60} y={190}>En déduire, à l’aide du théorème des gendarmes, que lim h(x) = 0 quand x→+∞.</T></Q>
       <Q x={40} y={218} n="3."><T x={60} y={218}>Étudier lim h(x) quand x→0. Que peut-on dire ?</T></Q>
 
       <GraphAxes x={150} y={280} w={300} h={240} />
@@ -346,7 +346,7 @@ function VariantExpFunct() {
 
       <Q x={40} y={162} n="1."><T x={60} y={162}>Étudier la parité de φ.</T></Q>
       <Q x={40} y={190} n="2."><T x={60} y={190}>Calculer les limites de φ en ±∞. Interpréter géométriquement.</T></Q>
-      <Q x={40} y={218} n="3."><T x={60} y={218}>Montrer que φ'(x) = −2x·e^(−x²). Dresser le tableau de variations.</T></Q>
+      <Q x={40} y={218} n="3."><T x={60} y={218}>Montrer que φ′(x) = −2x·e^(−x²). Dresser le tableau de variations.</T></Q>
 
       <GraphAxes x={150} y={280} w={300} h={240} />
       <path d="M 170 520 Q 250 520 300 340 Q 350 520 450 520" stroke={BLUE} strokeWidth="1.2" fill="none" />
@@ -432,7 +432,7 @@ function VariantBarycentre() {
       <T x={40} y={110} s={9}>Soient les points A, B, C du plan. On considère le point G barycentre de:</T>
       <ItalicT x={120} y={132} s={11}>(A, 2) ; (B, 3) ; (C, 1)</ItalicT>
 
-      <Q x={40} y={162} n="1."><T x={60} y={162}>Justifier l'existence du barycentre G.</T></Q>
+      <Q x={40} y={162} n="1."><T x={60} y={162}>Justifier l’existence du barycentre G.</T></Q>
       <Q x={40} y={190} n="2."><T x={60} y={190}>Exprimer le vecteur OG en fonction des vecteurs OA, OB, OC.</T></Q>
       <Q x={40} y={218} n="3."><T x={60} y={218}>Montrer que G appartient au segment [AB] dans un cas particulier.</T></Q>
 
@@ -490,7 +490,7 @@ function VariantVariablesAleatoires() {
       <ItalicT x={225} y={158} s={8}>0.2</ItalicT>
 
       <Q x={40} y={200} n="1."><T x={60} y={200}>Compléter la loi de probabilité sachant que P(X=3) = 0.3.</T></Q>
-      <Q x={40} y={228} n="2."><T x={60} y={228}>Calculer l'espérance E(X) et la variance V(X).</T></Q>
+      <Q x={40} y={228} n="2."><T x={60} y={228}>Calculer l’espérance E(X) et la variance V(X).</T></Q>
       <Q x={40} y={256} n="3."><T x={60} y={256}>Définir Y = 2X − 1. Calculer E(Y) et V(Y).</T></Q>
     </g>
   );

@@ -21,13 +21,13 @@ Vercel.
 
 ```text
 NEXT_PUBLIC_SUPABASE_URL=<Supabase Project URL>
-NEXT_PUBLIC_SUPABASE_ANON_KEY=<Supabase anon key>
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<Supabase publishable key>
 SUPABASE_URL=<Supabase Project URL>
-SUPABASE_SERVICE_ROLE_KEY=<Supabase service_role key>
+SUPABASE_SECRET_KEY=<Supabase secret key>
 FRONTEND_ORIGINS=<Vercel deployment URL once created>
 ```
 
-`SUPABASE_SERVICE_ROLE_KEY` is server-only. It must never have a
+`SUPABASE_SECRET_KEY` is server-only. It must never have a
 `NEXT_PUBLIC_` prefix, be committed, or be copied into the browser.
 
 For the first deployment, `FRONTEND_ORIGINS` can be `http://localhost:3000`.
@@ -42,14 +42,35 @@ Configuration** add:
 
 - the Vercel Site URL;
 - `<Vercel URL>/reinitialiser-mot-de-passe` as an additional redirect URL.
+- `<Vercel URL>/confirmation-inscription` as an additional redirect URL.
+
+If Cloudflare Turnstile is enabled, add both the Vercel production hostname and
+the local development hostname (`localhost`) to the widget's allowed hostnames.
+
+## Database migrations
+
+Run every SQL migration in `database/migrations/` that has not yet been applied
+to the production Supabase project before releasing the matching application
+code. In particular, the private instructions and chapter-management release
+needs:
+
+```text
+20260824_teacher_instructions.sql
+20260824_private_instruction_threads.sql
+20260824_chapter_revisions.sql
+```
+
+The SQL Editor reports success for each migration. Keep a record of applied
+migrations; do not run a migration twice unless it is written to be idempotent.
 
 ## Verification checklist
 
 1. Visit `<Vercel URL>/health`; it must return
    `{"status":"ok","service":"wahamath-api"}`.
-2. Open the Vercel URL and register a test student.
+2. Open the Vercel URL and register a test student; the confirmation link must
+   land on `/confirmation-inscription` and then show the approval waiting page.
 3. Verify Brevo confirmation email, teacher approval, login, exercises,
-   comments, moderation, and password recovery.
+   comments, moderation, private instructions, and password recovery.
 
 When a custom domain is purchased, add it to Vercel and Supabase URL
 configuration, then update `FRONTEND_ORIGINS` in Vercel.

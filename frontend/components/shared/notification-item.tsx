@@ -6,8 +6,7 @@ import type { Notification } from '@/lib/types';
 
 function timeAgo(iso: string): string {
   const d = new Date(iso);
-  const now = new Date('2026-08-21T12:00:00');
-  const diff = (now.getTime() - d.getTime()) / 1000;
+  const diff = Math.max(0, (Date.now() - d.getTime()) / 1000);
   if (diff < 60) return "à l'instant";
   if (diff < 3600) return `il y a ${Math.floor(diff / 60)} min`;
   if (diff < 86400) return `il y a ${Math.floor(diff / 3600)} h`;
@@ -19,6 +18,7 @@ const iconMap = {
   new_exercise: { icon: FileText, cls: 'bg-accent/10 text-accent' },
   new_reply: { icon: Bell, cls: 'bg-primary/10 text-primary' },
   moderation: { icon: ShieldAlert, cls: 'bg-warning/10 text-warning' },
+  instruction: { icon: MessageCircle, cls: 'bg-accent/10 text-accent' },
   system: { icon: Info, cls: 'bg-secondary text-muted-foreground' },
 };
 

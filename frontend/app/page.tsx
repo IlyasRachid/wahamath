@@ -5,6 +5,7 @@ import { ArrowRight, BookOpen, GraduationCap, MessageSquare, ShieldCheck } from 
 import { WahaLogo } from '@/components/brand/logo';
 import { MathMotifAxes, MathMotifFormula, MathMotifGrid, MathMotifIntegral, MathMotifSigma } from '@/components/math/motifs';
 import { Button } from '@/components/ui/button';
+import { ThemeToggle } from '@/components/shared/theme-toggle';
 
 export default function Home() {
   return (
@@ -32,6 +33,7 @@ export default function Home() {
       <header className="relative z-10 mx-auto flex max-w-6xl items-center justify-between px-6 py-6">
         <WahaLogo />
         <div className="flex items-center gap-2">
+          <ThemeToggle />
           <Button asChild variant="ghost" size="sm">
             <Link href="/inscription">Inscription</Link>
           </Button>
@@ -79,7 +81,7 @@ export default function Home() {
                 à tes professeurs et camarades.
               </p>
               <div className="mt-6 flex items-center gap-1.5 text-sm font-medium text-primary transition-all group-hover:gap-2.5">
-                Accéder à l'espace élève
+                Accéder à l’espace élève
                 <ArrowRight className="h-4 w-4" />
               </div>
             </div>
@@ -99,10 +101,10 @@ export default function Home() {
               <h2 className="text-xl font-bold text-foreground">Je suis professeur</h2>
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
                 Publie des exercices, encadre les discussions, modère les échanges
-                et suis l'activité de tes classes.
+                et suis l’activité de tes classes.
               </p>
               <div className="mt-6 flex items-center gap-1.5 text-sm font-medium text-accent transition-all group-hover:gap-2.5">
-                Accéder à l'espace professeur
+                Accéder à l’espace professeur
                 <ArrowRight className="h-4 w-4" />
               </div>
             </div>
@@ -134,7 +136,7 @@ export default function Home() {
             <WahaLogo showText={false} />
             <span>WahaMath — Prototype de validation</span>
           </div>
-          <p>Conçu pour les lycées marocains · Interface en français</p>
+          <p>Contact : wahamath@hotmail.com</p>
         </div>
       </footer>
     </div>

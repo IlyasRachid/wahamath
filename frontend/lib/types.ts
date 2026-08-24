@@ -60,7 +60,7 @@ export type QuestionThread = {
 
 export type Notification = {
   id: string;
-  type: 'reply' | 'new_exercise' | 'new_reply' | 'moderation' | 'system';
+  type: 'reply' | 'new_exercise' | 'new_reply' | 'moderation' | 'instruction' | 'system';
   title: string;
   body: string;
   href?: string | null;

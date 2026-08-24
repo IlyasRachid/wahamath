@@ -35,7 +35,7 @@ export function UploadDropzone({ className, onUploaded, onFileChange }: Props) {
       onUploaded?.(true);
       onFileChange?.(file);
     },
-    [onUploaded],
+    [onFileChange, onUploaded],
   );
 
   useEffect(() => {
@@ -48,7 +48,8 @@ export function UploadDropzone({ className, onUploaded, onFileChange }: Props) {
   return (
     <div className={className}>
       {!hasFile ? (
-        <div
+        <label
+          htmlFor="upload-input"
           onDragOver={(e) => {
             e.preventDefault();
             setIsDragging(true);
@@ -59,7 +60,6 @@ export function UploadDropzone({ className, onUploaded, onFileChange }: Props) {
             setIsDragging(false);
             handleFiles(e.dataTransfer.files);
           }}
-          onClick={() => document.getElementById('upload-input')?.click()}
           className={cn(
             'flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed px-6 py-12 text-center transition-colors',
             isDragging ? 'border-primary bg-primary/5' : 'border-border bg-secondary/30 hover:border-primary/40 hover:bg-secondary/50',
@@ -69,7 +69,7 @@ export function UploadDropzone({ className, onUploaded, onFileChange }: Props) {
             <UploadCloud className="h-6 w-6" />
           </div>
           <p className="text-sm font-medium text-foreground">
-            Glissez-déposez l'image de l'exercice ici
+            Glissez-déposez l’image de l’exercice ici
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
             ou cliquez pour parcourir — PNG, JPG (max 10 Mo)
@@ -81,7 +81,7 @@ export function UploadDropzone({ className, onUploaded, onFileChange }: Props) {
             className="hidden"
             onChange={(e) => handleFiles(e.target.files)}
           />
-        </div>
+        </label>
       ) : (
         <div className="overflow-hidden rounded-xl border border-border bg-card">
           <div className="flex items-center justify-between border-b border-border bg-success/5 px-4 py-2.5">

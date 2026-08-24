@@ -46,6 +46,14 @@ Le frontend utilise normalement `http://localhost:3000` et le backend `http://lo
 
 Si un port est déjà occupé, identifier le processus existant avant de lancer une seconde instance. Après toute modification de route FastAPI, redémarrer le backend si `--reload` ne l'a pas fait correctement.
 
+### Politique de livraison
+
+- La version Vercel déjà déployée est une version de validation stable.
+- Toutes les corrections et nouvelles fonctionnalités sont réalisées et testées localement d'abord.
+- Ne pas pousser chaque correction sur `main`, car chaque push déclenche un déploiement Vercel.
+- Regrouper les corrections dans une même branche de travail ou copie locale, vérifier les flux complets, puis pousser une seule livraison validée vers `main`.
+- Avant cette livraison unique, vérifier au minimum le typecheck frontend, la compilation Python et les flux élève/professeur concernés.
+
 ## 3. Configuration Supabase
 
 Les fichiers locaux requis sont :
@@ -55,7 +63,7 @@ Les fichiers locaux requis sont :
 
 Le frontend utilise les variables publiques Supabase et `NEXT_PUBLIC_API_URL`.
 
-Le backend a besoin de l'URL Supabase et de la clé `service_role`. Cette clé reste strictement côté serveur. `backend/app/config.py` normalise également une URL terminant par `/rest/v1/`, mais il faut préférer l'URL racine du projet Supabase.
+Le backend a besoin de l'URL Supabase et d'une clé secrète `SUPABASE_SECRET_KEY` (`sb_secret_…`). Cette clé reste strictement côté serveur. `backend/app/config.py` normalise également une URL terminant par `/rest/v1/`, mais il faut préférer l'URL racine du projet Supabase.
 
 Les migrations doivent être appliquées dans l'éditeur SQL Supabase, dans cet ordre :
 
@@ -65,6 +73,11 @@ Les migrations doivent être appliquées dans l'éditeur SQL Supabase, dans cet 
 4. `database/migrations/20260822_student_contact_and_administration.sql`
 5. `database/migrations/20260822_require_phone_for_new_students.sql`
 6. `database/migrations/20260822_fix_phone_number_constraint.sql`
+7. `database/migrations/20260823_harden_comment_permissions.sql`
+8. `database/migrations/20260823_require_valid_requested_class.sql`
+9. `database/migrations/20260823_api_rate_limits.sql`
+10. `database/migrations/20260823_data_revisions.sql`
+11. `database/migrations/20260823_move_student_class_atomically.sql`
 
 Dans Supabase → Authentication → URL Configuration, autoriser `http://localhost:3000/reinitialiser-mot-de-passe` et l’URL équivalente du domaine de production.
 
@@ -165,6 +178,9 @@ DELETE /api/exercises/{id}
 - `frontend/app/prof/classes/page.tsx` et `frontend/components/shared/teacher-student-roster.tsx` : le professeur voit le registre complet des élèves actifs, regroupé par classe et filtrable par classe. La source est `/api/classes`, qui inclut déjà les membres approuvés pour le rôle professeur; ne pas dupliquer cette requête avec une nouvelle liste simulée.
 - `database/migrations/20260822_student_contact_and_administration.sql` : ajoute `profiles.phone_number` et met à jour le trigger d’inscription pour stocker le téléphone fourni dans les métadonnées Auth. À appliquer dans Supabase avant de tester une nouvelle inscription. La fiche élève appelle `GET /api/admin/students/{id}` (e-mail depuis Supabase Auth, téléphone et classes depuis la base) uniquement après clic du professeur. `DELETE /api/admin/students/{id}` est réservé au professeur et supprime définitivement le compte Auth étudiant, avec les cascades de la base; l’interface impose une seconde confirmation.
 - `database/migrations/20260822_require_phone_for_new_students.sql` : rend le téléphone obligatoire aussi dans le trigger SQL (pas seulement dans le formulaire). L’appliquer après la migration de contact; les comptes Auth créés manuellement doivent alors inclure `phone_number` dans leurs métadonnées ou être créés avec un numéro valide.
+- `database/migrations/20260823_harden_comment_permissions.sql` : empêche un élève connecté de modifier directement les champs de modération d’un commentaire via l’API Supabase. Les élèves peuvent uniquement créer un commentaire visible et non modéré; toute modification est réservée au professeur. Le trigger garantit aussi qu’une réponse vise un parent visible, non verrouillé, et appartenant au même exercice.
+- `database/migrations/20260823_require_valid_requested_class.sql` : exige que `requested_class_code` corresponde à une classe réelle avant que le trigger d’inscription crée un profil en attente. Cela bloque aussi les inscriptions directes via Supabase Auth sans classe valide.
+- L’approbation d’une inscription vérifie aussi `email_confirmed_at` dans Supabase Auth. La page professeur affiche cet état et désactive l’acceptation tant que l’élève n’a pas confirmé son e-mail; le contrôle serveur reste obligatoire même si l’interface est contournée.
 - La fiche élève professeur permet aussi de changer la classe, suspendre ou réactiver le compte. Ces opérations passent par `PATCH /api/admin/students/{id}` et exigent le rôle professeur côté API. Une suspension conserve le compte et la classe mais bloque l’accès; seule la suppression appelle Supabase Auth et efface les données de façon définitive.
 - `frontend/app/prof/exercices/[id]/modifier/page.tsx` et `PUT /api/exercises/{exercise_id}` fournissent l’édition complète d’un exercice : titre, description, classe, chapitre, difficulté, tags, statut et remplacement optionnel de l’image. Lors d’un remplacement, la nouvelle image est téléversée avant la mise à jour; elle est supprimée si la base échoue, et l’ancienne image n’est supprimée qu’après succès. Le frontend invalide `exercises`, `classes` et `notifications` après l’enregistrement.
 - `frontend/app/eleve/exercices/page.tsx` : liste élève; ne pas réintroduire de filtre « Toutes les classes ».

@@ -11,6 +11,7 @@ import {
 } from '@/components/math/motifs';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
+import { ThemeToggle } from '@/components/shared/theme-toggle';
 
 export function AuthLayout({
   children,
@@ -86,27 +87,16 @@ export function AuthLayout({
         {/* Mobile header */}
         <div className="flex items-center justify-between px-6 py-6 lg:hidden">
           <WahaLogo />
-          {showBack && (
-            <Link
-              href="/"
-              className="inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Accueil
-            </Link>
-          )}
+          <div className="flex items-center gap-1">{showBack && (
+            <Link href="/" className="inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"><ArrowLeft className="h-4 w-4" />Accueil</Link>
+          )}<ThemeToggle /></div>
         </div>
 
         {/* Desktop back link */}
         {showBack && (
-          <div className="hidden px-12 pt-8 lg:block">
-            <Link
-              href="/"
-              className="inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Retour à l'accueil
-            </Link>
+          <div className="hidden items-center justify-between px-12 pt-8 lg:flex">
+            <Link href="/" className="inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"><ArrowLeft className="h-4 w-4" />Retour à l’accueil</Link>
+            <ThemeToggle />
           </div>
         )}
 

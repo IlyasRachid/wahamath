@@ -46,6 +46,19 @@ function ExerciseViewer({
   const [posting, setPosting] = useState(false);
   const [commentError, setCommentError] = useState<string | null>(null);
 
+  const refreshExerciseData = async () => {
+    const exercisePath = `/api/exercises/${params.id}`;
+    const commentsPath = `${exercisePath}/comments`;
+    invalidateApiCache(exercisePath);
+    invalidateApiCache(commentsPath);
+    const [exercisePayload, commentsPayload] = await Promise.all([
+      cachedApiGet<RemoteExercise>(exercisePath, 30_000, ['exercises']),
+      cachedApiGet<{ items: any[] }>(commentsPath, 30_000, ['comments']),
+    ]);
+    setExercise(exercisePayload);
+    setComments(buildCommentTree(commentsPayload.items, params.id));
+  };
+
   useEffect(() => {
     const loadExercise = async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -154,14 +167,20 @@ function ExerciseViewer({
     }
   };
 
-  const moderateComment = async (commentId: string, action: 'hide' | 'pin' | 'resolve' | 'lock') => {
+  const moderateComment = async (commentId: string, action: 'hide' | 'restore' | 'pin' | 'resolve' | 'lock') => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
-    const response = await fetch(`${apiUrl}/api/comments/${commentId}/moderate`, {
-      method: 'POST', headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ action }),
-    });
-    if (response.ok) { invalidateCacheTags('comments', 'questions', 'reports'); window.location.reload(); }
-    else setCommentError('Impossible de modérer ce commentaire.');
+    setCommentError(null);
+    try {
+      const response = await fetch(`${apiUrl}/api/comments/${commentId}/moderate`, {
+        method: 'POST', headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ action }),
+      });
+      if (!response.ok) throw new Error('Impossible de modérer ce commentaire.');
+      invalidateCacheTags('comments', 'questions', 'reports');
+      await refreshExerciseData();
+    } catch (requestError) {
+      setCommentError(requestError instanceof Error ? requestError.message : 'Impossible de modérer ce commentaire.');
+    }
   };
   const reportComment = async (commentId: string) => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -185,13 +204,13 @@ function ExerciseViewer({
         <div className="flex items-center justify-between border-b border-border bg-secondary/30 px-4 py-2.5">
           <p className="text-sm font-medium text-foreground">Énoncé de l’exercice</p>
           <div className="flex items-center gap-1">
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setZoom((value) => Math.max(0.5, value - 0.25))}><ZoomOut className="h-4 w-4" /></Button>
+            <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Réduire le zoom" onClick={() => setZoom((value) => Math.max(0.5, value - 0.25))}><ZoomOut className="h-4 w-4" /></Button>
             <span className="px-1 text-xs text-muted-foreground">{Math.round(zoom * 100)}%</span>
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setZoom((value) => Math.min(2.5, value + 0.25))}><ZoomIn className="h-4 w-4" /></Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setFullscreen(true)}><Maximize2 className="h-4 w-4" /></Button>
+            <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Augmenter le zoom" onClick={() => setZoom((value) => Math.min(2.5, value + 0.25))}><ZoomIn className="h-4 w-4" /></Button>
+            <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Afficher l’énoncé en plein écran" onClick={() => setFullscreen(true)}><Maximize2 className="h-4 w-4" /></Button>
           </div>
         </div>
-        <CardContent className="overflow-auto bg-[#f5f4f0] p-4 sm:p-8"><div className="mx-auto transition-transform duration-200">{image}</div></CardContent>
+        <CardContent className="overflow-auto bg-secondary/40 p-4 sm:p-8"><div className="mx-auto transition-transform duration-200">{image}</div></CardContent>
       </Card>
 
       <div className="space-y-1"><p className="text-xs text-muted-foreground">Publié le {new Date(exercise.published_at).toLocaleDateString('fr-FR')}</p>{exercise.description && <p className="text-sm text-muted-foreground">{exercise.description}</p>}</div>
@@ -209,8 +228,8 @@ function ExerciseViewer({
 
       {fullscreen && (
         <div className="fixed inset-0 z-50 flex flex-col bg-background/95 backdrop-blur-sm">
-          <div className="flex items-center justify-between border-b border-border px-4 py-3"><p className="text-sm font-medium text-foreground">{exercise.title}</p><Button variant="ghost" size="icon" onClick={() => setFullscreen(false)}><Minimize2 className="h-4 w-4" /></Button></div>
-          <div className="flex-1 overflow-auto bg-[#f5f4f0] p-4 sm:p-8"><div className="mx-auto">{image}</div></div>
+          <div className="flex items-center justify-between border-b border-border px-4 py-3"><p className="text-sm font-medium text-foreground">{exercise.title}</p><Button variant="ghost" size="icon" aria-label="Quitter le plein écran" onClick={() => setFullscreen(false)}><Minimize2 className="h-4 w-4" /></Button></div>
+          <div className="flex-1 overflow-auto bg-secondary/40 p-4 sm:p-8"><div className="mx-auto">{image}</div></div>
         </div>
       )}
     </div>

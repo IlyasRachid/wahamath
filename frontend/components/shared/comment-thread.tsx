@@ -7,8 +7,7 @@ import { LockedBadge } from './badges';
 
 function timeAgo(iso: string): string {
   const d = new Date(iso);
-  const now = new Date('2026-08-21T12:00:00');
-  const diff = (now.getTime() - d.getTime()) / 1000;
+  const diff = Math.max(0, (Date.now() - d.getTime()) / 1000);
   if (diff < 60) return "à l'instant";
   if (diff < 3600) return `il y a ${Math.floor(diff / 60)} min`;
   if (diff < 86400) return `il y a ${Math.floor(diff / 3600)} h`;
@@ -25,7 +24,7 @@ type ItemProps = {
   onReply?: (id: string) => void;
   onReport?: (id: string) => void;
   isTeacher?: boolean;
-  onModerate?: (id: string, action: 'hide' | 'pin' | 'resolve' | 'lock') => void;
+  onModerate?: (id: string, action: 'hide' | 'restore' | 'pin' | 'resolve' | 'lock') => void;
 };
 
 export function CommentItem({ comment, isReply = false, onReply, onReport, isTeacher, onModerate }: ItemProps) {
@@ -95,7 +94,7 @@ type ThreadProps = {
   onReply?: (id: string) => void;
   onReport?: (id: string) => void;
   isTeacher?: boolean;
-  onModerate?: (id: string, action: 'hide' | 'pin' | 'resolve' | 'lock') => void;
+  onModerate?: (id: string, action: 'hide' | 'restore' | 'pin' | 'resolve' | 'lock') => void;
 };
 
 export function CommentThread({ comments, locked, onReply, onReport, isTeacher, onModerate }: ThreadProps) {

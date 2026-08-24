@@ -20,12 +20,6 @@ const difficultyOptions: FilterOption[] = [
   { label: 'Difficile', value: 'difficile' },
 ];
 
-const sortOptions: FilterOption[] = [
-  { label: 'Plus récents', value: 'recent' },
-  { label: 'Plus populaires', value: 'popular' },
-  { label: 'Plus de questions', value: 'questions' },
-];
-
 const PAGE_SIZE = 5;
 
 export default function ExercisesPage() {
@@ -35,15 +29,16 @@ export default function ExercisesPage() {
   const [search, setSearch] = useState(requestedSearch);
   const [chapterFilter, setChapterFilter] = useState(requestedChapter);
   const [difficultyFilter, setDifficultyFilter] = useState('all');
-  const [sort, setSort] = useState('recent');
   const [page, setPage] = useState(1);
   const cachedExercises = peekApiCache<{ items: any[] }>('/api/exercises');
+  const cachedClasses = peekApiCache<{ items: { chapters: { id: string; title: string }[] }[] }>('/api/classes');
   const toExercises = (items: any[]) => items.map((item: any, index: number) => ({
     id: item.id, number: index + 1, title: item.title, classCode: item.classes?.code ?? '', chapter: item.chapters?.title ?? 'Sans chapitre', difficulty: item.difficulty, status: 'nouveau' as const, publicationStatus: item.publication_status, viewCount: 0, questionCount: 0, publishedAt: item.published_at, tags: item.tags ?? [], artVariant: 1, imageUrl: item.image_url,
   }));
   const [exercises, setExercises] = useState<Exercise[]>(() => cachedExercises ? toExercises(cachedExercises.items) : []);
   const [loading, setLoading] = useState(!cachedExercises);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [classChapters, setClassChapters] = useState<{ id: string; title: string }[]>(() => cachedClasses?.items.flatMap((item) => item.chapters) ?? []);
 
   useEffect(() => {
     const loadExercises = async () => {
@@ -58,6 +53,19 @@ export default function ExercisesPage() {
       }
     };
     loadExercises();
+  }, []);
+
+  useEffect(() => {
+    const loadChapters = async () => {
+      if (cachedClasses) return;
+      try {
+        const payload = await cachedApiGet<{ items: { chapters: { id: string; title: string }[] }[] }>('/api/classes', 5 * 60_000, ['classes']);
+        setClassChapters(payload.items.flatMap((item) => item.chapters));
+      } catch {
+        // Exercises stay usable if the chapter metadata is temporarily unavailable.
+      }
+    };
+    void loadChapters();
   }, []);
 
   useEffect(() => {
@@ -83,17 +91,12 @@ export default function ExercisesPage() {
     if (chapterFilter !== 'all') result = result.filter((e) => e.chapter === chapterFilter);
     if (difficultyFilter !== 'all') result = result.filter((e) => e.difficulty === difficultyFilter);
 
-    result = [...result].sort((a, b) => {
-      if (sort === 'popular') return b.viewCount - a.viewCount;
-      if (sort === 'questions') return b.questionCount - a.questionCount;
-      return new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime();
-    });
     return result;
-  }, [exercises, search, chapterFilter, difficultyFilter, sort]);
+  }, [exercises, search, chapterFilter, difficultyFilter]);
   const chapterOptions: FilterOption[] = useMemo(() => [
     { label: 'Tous les chapitres', value: 'all' },
-    ...Array.from(new Set(exercises.map((exercise) => exercise.chapter))).sort((a, b) => a.localeCompare(b, 'fr')).map((chapter) => ({ label: chapter, value: chapter })),
-  ], [exercises]);
+    ...Array.from(new Set(classChapters.map((chapter) => chapter.title))).sort((a, b) => a.localeCompare(b, 'fr')).map((chapter) => ({ label: chapter, value: chapter })),
+  ], [classChapters]);
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -117,7 +120,6 @@ export default function ExercisesPage() {
         filters={[
           { label: 'Chapitre', value: chapterFilter, options: chapterOptions, onChange: (v) => { setChapterFilter(v); resetPage(); } },
           { label: 'Difficulté', value: difficultyFilter, options: difficultyOptions, onChange: (v) => { setDifficultyFilter(v); resetPage(); } },
-          { label: 'Trier par', value: sort, options: sortOptions, onChange: setSort },
         ]}
       />
 

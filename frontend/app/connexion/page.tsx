@@ -8,8 +8,8 @@ import { AuthLayout } from '@/components/shared/auth-layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/lib/supabase/client';
+import { Turnstile } from '@/components/shared/turnstile';
 
 type FieldErrors = {
   email?: string;
@@ -26,10 +26,10 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [role, setRole] = useState<LoginRole>(searchParams.get('role') === 'teacher' ? 'teacher' : 'student');
   const [showPassword, setShowPassword] = useState(false);
-  const [remember, setRemember] = useState(false);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
 
   const validate = (): boolean => {
     const e: FieldErrors = {};
@@ -49,16 +49,25 @@ export default function LoginPage() {
     ev.preventDefault();
     setErrors({});
     if (!validate()) return;
+    if (!captchaToken) { setErrors({ form: 'Veuillez confirmer que vous n’êtes pas un robot.' }); return; }
 
     setLoading(true);
     const { data, error } = await supabase.auth.signInWithPassword({
       email: email.trim(),
       password,
+      options: { captchaToken: captchaToken ?? undefined },
     });
 
     if (error || !data.user) {
       setLoading(false);
-      setErrors({ form: 'Adresse e-mail ou mot de passe incorrect.' });
+      const message = error?.code === 'email_not_confirmed'
+        ? 'Veuillez confirmer votre adresse e-mail avant de vous connecter.'
+        : error?.message?.toLowerCase().includes('captcha')
+          ? 'La vérification de sécurité a échoué. Veuillez réessayer.'
+          : error?.message?.toLowerCase().includes('api key')
+            ? 'La configuration de connexion est invalide. Contactez le professeur.'
+            : 'Adresse e-mail ou mot de passe incorrect.';
+      setErrors({ form: message });
       return;
     }
 
@@ -231,17 +240,7 @@ export default function LoginPage() {
           )}
         </div>
 
-        {/* Remember me */}
-        <div className="flex items-center gap-2">
-          <Checkbox
-            id="remember"
-            checked={remember}
-            onCheckedChange={(v) => setRemember(v === true)}
-          />
-          <Label htmlFor="remember" className="text-sm font-normal text-muted-foreground cursor-pointer">
-            Se souvenir de moi
-          </Label>
-        </div>
+        <Turnstile onToken={(token) => { setCaptchaToken(token); if (errors.form) setErrors((current) => ({ ...current, form: undefined })); }} />
 
         {/* Submit */}
         <Button type="submit" className="w-full" size="lg" disabled={loading}>

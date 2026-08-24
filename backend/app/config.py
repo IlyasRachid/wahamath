@@ -11,7 +11,7 @@ load_dotenv(Path(__file__).resolve().parent.parent / '.env.local')
 class Settings:
     frontend_origins: list[str]
     supabase_url: str | None
-    supabase_service_role_key: str | None
+    supabase_secret_key: str | None
 
 
 def get_settings() -> Settings:
@@ -24,5 +24,7 @@ def get_settings() -> Settings:
     return Settings(
         frontend_origins=[origin.strip() for origin in origins.split(',') if origin.strip()],
         supabase_url=supabase_url or None,
-        supabase_service_role_key=os.getenv('SUPABASE_SERVICE_ROLE_KEY'),
+        # SUPABASE_SECRET_KEY is the current opaque server-only key format.
+        # Keep the legacy name as a temporary fallback during migration.
+        supabase_secret_key=os.getenv('SUPABASE_SECRET_KEY') or os.getenv('SUPABASE_SERVICE_ROLE_KEY'),
     )

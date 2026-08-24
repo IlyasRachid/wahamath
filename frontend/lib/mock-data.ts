@@ -13,26 +13,26 @@ import type {
 
 export const classes: { code: ClassCode; label: string; description: string }[] =
   [
-    { code: 'SM2', label: 'Sciences Mathématiques 2', description: 'Terminale SM' },
-    { code: 'SM1', label: 'Sciences Mathématiques 1', description: '1ère SM' },
-    { code: 'PC2', label: 'Physique-Chimie 2', description: 'Terminale PC' },
-    { code: 'TC', label: 'Tronc Commun', description: 'Tronc commun scientifique' },
+    { code: '2SM', label: 'Sciences Mathématiques — 2e année', description: 'Terminale SM' },
+    { code: '1SM', label: 'Sciences Mathématiques — 1re année', description: '1re année SM' },
+    { code: '2PC&SVT', label: 'Physique-Chimie et SVT — 2e année', description: 'Terminale PC et SVT' },
+    { code: 'TCS', label: 'Tronc Commun Scientifique', description: 'Tronc commun scientifique' },
   ];
 
 export const chapters: Chapter[] = [
-  { id: 'ch-sm2-1', classCode: 'SM2', name: 'Limites et continuité', slug: 'limites-continuite' },
-  { id: 'ch-sm2-2', classCode: 'SM2', name: 'Dérivation', slug: 'derivation' },
-  { id: 'ch-sm2-3', classCode: 'SM2', name: 'Suites numériques', slug: 'suites' },
-  { id: 'ch-sm2-4', classCode: 'SM2', name: 'Fonctions exponentielles', slug: 'exponentielles' },
-  { id: 'ch-sm2-5', classCode: 'SM2', name: 'Équations différentielles', slug: 'equations-differentielles' },
-  { id: 'ch-sm2-6', classCode: 'SM2', name: 'Probabilités', slug: 'probabilites' },
-  { id: 'ch-sm1-1', classCode: 'SM1', name: 'Étude de fonctions', slug: 'etude-fonctions' },
-  { id: 'ch-sm1-2', classCode: 'SM1', name: 'Suites et récurrence', slug: 'suites-recurrence' },
-  { id: 'ch-sm1-3', classCode: 'SM1', name: 'Trigonométrie', slug: 'trigonometrie' },
-  { id: 'ch-pc2-1', classCode: 'PC2', name: 'Limites et continuité', slug: 'limites-pc2' },
-  { id: 'ch-pc2-2', classCode: 'PC2', name: 'Géométrie dans l\'espace', slug: 'geometrie-espace' },
-  { id: 'ch-tc-1', classCode: 'TC', name: 'Généralités sur les fonctions', slug: 'generalites-fonctions' },
-  { id: 'ch-tc-2', classCode: 'TC', name: 'Barycentre', slug: 'barycentre' },
+  { id: 'ch-sm2-1', classCode: '2SM', name: 'Limites et continuité', slug: 'limites-continuite' },
+  { id: 'ch-sm2-2', classCode: '2SM', name: 'Dérivation', slug: 'derivation' },
+  { id: 'ch-sm2-3', classCode: '2SM', name: 'Suites numériques', slug: 'suites' },
+  { id: 'ch-sm2-4', classCode: '2SM', name: 'Fonctions exponentielles', slug: 'exponentielles' },
+  { id: 'ch-sm2-5', classCode: '2SM', name: 'Équations différentielles', slug: 'equations-differentielles' },
+  { id: 'ch-sm2-6', classCode: '2SM', name: 'Probabilités', slug: 'probabilites' },
+  { id: 'ch-sm1-1', classCode: '1SM', name: 'Étude de fonctions', slug: 'etude-fonctions' },
+  { id: 'ch-sm1-2', classCode: '1SM', name: 'Suites et récurrence', slug: 'suites-recurrence' },
+  { id: 'ch-sm1-3', classCode: '1SM', name: 'Trigonométrie', slug: 'trigonometrie' },
+  { id: 'ch-pc2-1', classCode: '2PC&SVT', name: 'Limites et continuité', slug: 'limites-pc2' },
+  { id: 'ch-pc2-2', classCode: '2PC&SVT', name: 'Géométrie dans l\'espace', slug: 'geometrie-espace' },
+  { id: 'ch-tc-1', classCode: 'TCS', name: 'Généralités sur les fonctions', slug: 'generalites-fonctions' },
+  { id: 'ch-tc-2', classCode: 'TCS', name: 'Barycentre', slug: 'barycentre' },
 ];
 
 export const student: Student = {

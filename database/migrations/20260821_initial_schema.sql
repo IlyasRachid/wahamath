@@ -18,7 +18,7 @@ create table public.profiles (
 
 create table public.classes (
   id uuid primary key default gen_random_uuid(),
-  code text not null unique check (code in ('SM2', 'SM1', 'PC2', 'TC')),
+  code text not null unique check (code in ('2SM', '1SM', '2PC&SVT', 'TCS')),
   name text not null,
   academic_year text not null default '2026-2027',
   is_visible boolean not null default true,
@@ -157,26 +157,26 @@ create policy "users create their own reports" on public.comment_reports for ins
 create policy "teachers manage reports" on public.comment_reports for all using (public.is_teacher()) with check (public.is_teacher());
 
 insert into public.classes (code, name) values
-  ('SM2', 'Sciences Mathématiques 2'),
-  ('SM1', 'Sciences Mathématiques 1'),
-  ('PC2', 'Physique-Chimie 2'),
-  ('TC', 'Tronc Commun');
+  ('2SM', 'Sciences Mathématiques — 2e année'),
+  ('1SM', 'Sciences Mathématiques — 1re année'),
+  ('2PC&SVT', 'Physique-Chimie et SVT — 2e année'),
+  ('TCS', 'Tronc Commun Scientifique');
 
 insert into public.chapters (class_id, title, slug, sort_order)
 select id, chapter.title, chapter.slug, chapter.sort_order
 from public.classes
 join (values
-  ('SM2', 'Limites et continuité', 'limites-continuite', 1),
-  ('SM2', 'Dérivation', 'derivation', 2),
-  ('SM2', 'Suites numériques', 'suites', 3),
-  ('SM2', 'Fonctions exponentielles', 'exponentielles', 4),
-  ('SM2', 'Équations différentielles', 'equations-differentielles', 5),
-  ('SM2', 'Probabilités', 'probabilites', 6),
-  ('SM1', 'Étude de fonctions', 'etude-fonctions', 1),
-  ('SM1', 'Suites et récurrence', 'suites-recurrence', 2),
-  ('SM1', 'Trigonométrie', 'trigonometrie', 3),
-  ('PC2', 'Limites et continuité', 'limites-pc2', 1),
-  ('PC2', 'Géométrie dans l''espace', 'geometrie-espace', 2),
-  ('TC', 'Généralités sur les fonctions', 'generalites-fonctions', 1),
-  ('TC', 'Barycentre', 'barycentre', 2)
+  ('2SM', 'Limites et continuité', 'limites-continuite', 1),
+  ('2SM', 'Dérivation', 'derivation', 2),
+  ('2SM', 'Suites numériques', 'suites', 3),
+  ('2SM', 'Fonctions exponentielles', 'exponentielles', 4),
+  ('2SM', 'Équations différentielles', 'equations-differentielles', 5),
+  ('2SM', 'Probabilités', 'probabilites', 6),
+  ('1SM', 'Étude de fonctions', 'etude-fonctions', 1),
+  ('1SM', 'Suites et récurrence', 'suites-recurrence', 2),
+  ('1SM', 'Trigonométrie', 'trigonometrie', 3),
+  ('2PC&SVT', 'Limites et continuité', 'limites-pc2', 1),
+  ('2PC&SVT', 'Géométrie dans l''espace', 'geometrie-espace', 2),
+  ('TCS', 'Généralités sur les fonctions', 'generalites-fonctions', 1),
+  ('TCS', 'Barycentre', 'barycentre', 2)
 ) as chapter(class_code, title, slug, sort_order) on chapter.class_code = classes.code;

@@ -15,10 +15,10 @@ import { supabase } from '@/lib/supabase/client';
 import { Turnstile } from '@/components/shared/turnstile';
 
 const classOptions: { code: ClassCode; title: string; description: string }[] = [
-  { code: 'SM2', title: 'Sciences Mathématiques 2', description: 'Terminale — parcours mathématiques' },
-  { code: 'SM1', title: 'Sciences Mathématiques 1', description: '1ère année — parcours mathématiques' },
-  { code: 'PC2', title: 'Physique-Chimie 2', description: 'Terminale — parcours physique-chimie' },
-  { code: 'TC', title: 'Tronc Commun', description: 'Tronc commun scientifique' },
+  { code: '2SM', title: 'Sciences Mathématiques — 2e année', description: 'Terminale — parcours mathématiques' },
+  { code: '1SM', title: 'Sciences Mathématiques — 1re année', description: '1re année du baccalauréat' },
+  { code: '2PC&SVT', title: 'Physique-Chimie et SVT — 2e année', description: 'Terminale — parcours sciences expérimentales' },
+  { code: 'TCS', title: 'Tronc Commun Scientifique', description: 'Tronc commun scientifique' },
 ];
 
 type FormErrors = {

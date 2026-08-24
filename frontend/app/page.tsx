@@ -114,7 +114,7 @@ export default function Home() {
         {/* Feature highlights */}
         <div className="mx-auto mt-20 grid max-w-4xl gap-6 sm:grid-cols-3">
           {[
-            { icon: BookOpen, title: 'Exercices par classe', desc: 'SM2, SM1, PC2, TC — organisés par chapitre' },
+            { icon: BookOpen, title: 'Exercices par classe', desc: '2SM, 1SM, 2PC&SVT, TCS — organisés par chapitre' },
             { icon: MessageSquare, title: 'Questions encadrées', desc: 'Discussions modérées par les professeurs' },
             { icon: ShieldCheck, title: 'Environnement sain', desc: 'Modération et bienveillance garanties' },
           ].map((f) => (
@@ -136,7 +136,12 @@ export default function Home() {
             <WahaLogo showText={false} />
             <span>WahaMath — Prototype de validation</span>
           </div>
-          <p>Contact : wahamath@hotmail.com</p>
+          <p>
+            Contact :{' '}
+            <a href="mailto:wahamath@hotmail.com" className="hover:text-foreground hover:underline">
+              wahamath@hotmail.com
+            </a>
+          </p>
         </div>
       </footer>
     </div>

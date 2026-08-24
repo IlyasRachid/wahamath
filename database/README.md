@@ -14,4 +14,4 @@ set role = 'teacher', status = 'active'
 where id = (select id from auth.users where email = 'teacher@example.com');
 ```
 
-The schema seeds SM2, SM1, PC2, and TC with the chapters currently shown by the frontend. Student accounts begin as `pending`; the teacher will later activate them and add their class membership from the admin UI.
+The schema seeds 2SM, 1SM, 2PC&SVT, and TCS with the chapters currently shown by the frontend. Student accounts begin as `pending`; the teacher will later activate them and add their class membership from the admin UI.

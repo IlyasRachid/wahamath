@@ -1,6 +1,8 @@
 export type Role = 'student' | 'teacher';
 
-export type ClassCode = 'SM2' | 'SM1' | 'PC2' | 'TC';
+// Class codes are managed by the teacher and returned by the API. Keep this
+// open-ended so new or renamed classes do not require a frontend release.
+export type ClassCode = string;
 
 export type Difficulty = 'facile' | 'moyen' | 'difficile';
 

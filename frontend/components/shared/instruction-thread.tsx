@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
+import { cachedApiGet, invalidateCacheTags, peekApiCache } from '@/lib/api-cache';
 
 type Thread = { id: string; student_id: string; teacher_id: string; status: 'open' | 'closed'; created_at: string; closed_at: string | null; exercises: { id: string; title: string } | null };
 type Message = { id: string; author_id: string; body: string; created_at: string };
@@ -22,9 +23,10 @@ function dateTime(value: string) { return new Date(value).toLocaleString('fr-FR'
 export function InstructionThread() {
   const params = useParams<{ id: string }>();
   const threadId = params.id;
-  const [data, setData] = useState<Payload | null>(null);
+  const cachedThread = peekApiCache<Payload>(`/api/instruction-threads/${threadId}`);
+  const [data, setData] = useState<Payload | null>(() => cachedThread);
   const [message, setMessage] = useState('');
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!cachedThread);
   const [sending, setSending] = useState(false);
   const [closing, setClosing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -40,12 +42,12 @@ export function InstructionThread() {
   };
 
   const load = async () => {
-    try { setError(null); setData(await request(`/api/instruction-threads/${threadId}`)); }
+    try { setError(null); setData(await cachedApiGet<Payload>(`/api/instruction-threads/${threadId}`, 5 * 60_000, ['instructions'])); }
     catch (requestError) { setError(requestError instanceof Error ? requestError.message : 'Impossible de charger la discussion.'); }
     finally { setLoading(false); }
   };
 
-  useEffect(() => { void load(); }, [threadId]);
+  useEffect(() => { void load(); const refresh = () => void load(); window.addEventListener('wahamath-instructions-updated', refresh); return () => window.removeEventListener('wahamath-instructions-updated', refresh); }, [threadId]);
 
   const send = async () => {
     const body = message.trim();
@@ -54,6 +56,7 @@ export function InstructionThread() {
     try {
       const payload = await request(`/api/instruction-threads/${threadId}/messages`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ body }) });
       setData((current) => current ? { ...current, messages: [...current.messages, payload.message] } : current);
+      invalidateCacheTags('instructions');
       setMessage('');
       toast({ title: 'Réponse envoyée' });
     } catch (requestError) { toast({ variant: 'destructive', title: 'Envoi impossible', description: requestError instanceof Error ? requestError.message : undefined }); }
@@ -65,6 +68,7 @@ export function InstructionThread() {
     try {
       await request(`/api/instruction-threads/${threadId}/close`, { method: 'POST' });
       setData((current) => current ? { ...current, thread: { ...current.thread, status: 'closed', closed_at: new Date().toISOString() } } : current);
+      invalidateCacheTags('instructions');
       toast({ title: 'Discussion clôturée', description: 'L’élève ne peut plus y répondre.' });
     } catch (requestError) { toast({ variant: 'destructive', title: 'Action impossible', description: requestError instanceof Error ? requestError.message : undefined }); }
     finally { setClosing(false); }
@@ -75,6 +79,7 @@ export function InstructionThread() {
     try {
       await request(`/api/instruction-threads/${threadId}/reopen`, { method: 'POST' });
       setData((current) => current ? { ...current, thread: { ...current.thread, status: 'open', closed_at: null } } : current);
+      invalidateCacheTags('instructions');
       toast({ title: 'Discussion rouverte', description: 'L’élève peut à nouveau répondre.' });
     } catch (requestError) { toast({ variant: 'destructive', title: 'Action impossible', description: requestError instanceof Error ? requestError.message : undefined }); }
     finally { setClosing(false); }

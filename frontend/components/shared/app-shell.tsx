@@ -77,7 +77,7 @@ export function AppShell({ role, navGroups, bottomNav, user, children }: Props) 
       if (revisions.ok) {
         const nextRevisions = Object.fromEntries((await revisions.json()).items.map((item: { resource: string; updated_at: string }) => [item.resource, item.updated_at]));
         const changed = Object.keys(nextRevisions).filter((resource) => previousRevisions.current[resource] && previousRevisions.current[resource] !== nextRevisions[resource]);
-        if (changed.length) invalidateCacheTags(...changed.filter((resource): resource is 'exercises' | 'classes' | 'questions' | 'comments' | 'notifications' | 'reports' | 'enrollments' => ['exercises', 'classes', 'questions', 'comments', 'notifications', 'reports', 'enrollments'].includes(resource)));
+        if (changed.length) invalidateCacheTags(...changed.filter((resource): resource is 'exercises' | 'classes' | 'questions' | 'comments' | 'notifications' | 'reports' | 'enrollments' | 'instructions' => ['exercises', 'classes', 'questions', 'comments', 'notifications', 'reports', 'enrollments', 'instructions'].includes(resource)));
         previousRevisions.current = nextRevisions;
       }
       const questions = await fetch(`${apiUrl}/api/questions`, { headers });
@@ -95,8 +95,11 @@ export function AppShell({ role, navGroups, bottomNav, user, children }: Props) 
         const cachedCount = cachedNotifications?.items.filter((item) => !item.read_at && (role !== 'teacher' || item.type === 'instruction')).length;
         const changed = previousNotificationCount.current !== nextCount || (cachedCount !== undefined && cachedCount !== nextCount);
         if (changed) {
-          invalidateCacheTags('notifications');
+          // A new private-instruction message produces a notification, so the
+          // list and any cached thread must refresh with it.
+          invalidateCacheTags('notifications', 'instructions');
           window.dispatchEvent(new Event('wahamath-notifications-updated'));
+          window.dispatchEvent(new Event('wahamath-instructions-updated'));
         }
         previousNotificationCount.current = nextCount;
         setNotificationCount(nextCount);

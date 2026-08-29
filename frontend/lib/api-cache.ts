@@ -1,7 +1,7 @@
 import { supabase } from '@/lib/supabase/client';
 import { apiUrl } from '@/lib/api-url';
 
-type CacheTag = 'exercises' | 'classes' | 'questions' | 'comments' | 'notifications' | 'reports' | 'profile' | 'enrollments';
+type CacheTag = 'exercises' | 'classes' | 'questions' | 'comments' | 'notifications' | 'reports' | 'profile' | 'enrollments' | 'instructions';
 type CacheEntry<T> = { data: T; expiresAt: number; tags: CacheTag[] };
 
 const cache = new Map<string, CacheEntry<unknown>>();
@@ -104,10 +104,12 @@ export async function preloadAuthenticatedData(role: 'student' | 'teacher') {
     ? [
       cachedApiGet('/api/notifications', 30_000, ['notifications']),
       cachedApiGet('/api/profile', 5 * 60_000, ['profile']),
+      cachedApiGet('/api/instruction-threads', 5 * 60_000, ['instructions']),
     ]
     : [
       cachedApiGet('/api/admin/students/pending', 30_000, ['enrollments']),
       cachedApiGet('/api/profile', 5 * 60_000, ['profile']),
+      cachedApiGet('/api/instruction-threads', 5 * 60_000, ['instructions']),
     ];
   await Promise.allSettled(secondaryRequests);
 

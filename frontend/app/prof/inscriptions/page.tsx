@@ -21,6 +21,9 @@ type PendingStudent = {
   phone_number: string | null;
 };
 
+function whatsappUrl(phoneNumber: string) {
+  return `https://wa.me/${phoneNumber.replace(/\D/g, '')}`;
+}
 
 export default function EnrollmentRequestsPage() {
   const cachedStudents = peekApiCache<{ items: PendingStudent[] }>('/api/admin/students/pending');
@@ -102,7 +105,7 @@ export default function EnrollmentRequestsPage() {
       <Dialog open={Boolean(selectedStudent)} onOpenChange={(open) => !open && setSelectedStudent(null)}>
         <DialogContent>
           <DialogHeader><DialogTitle>Fiche de l’élève</DialogTitle><DialogDescription>Informations fournies avec la demande d’inscription.</DialogDescription></DialogHeader>
-          {selectedStudent && <dl className="space-y-4 text-sm"><div><dt className="text-muted-foreground">Pseudonyme</dt><dd className="mt-1 font-medium text-foreground">{selectedStudent.display_name}</dd></div><div><dt className="text-muted-foreground">Classe demandée</dt><dd className="mt-1 font-medium text-foreground">{selectedStudent.requested_class ? `${selectedStudent.requested_class.code} — ${selectedStudent.requested_class.name}` : 'Non renseignée'}</dd></div><div><dt className="text-muted-foreground">Adresse e-mail</dt><dd className="mt-1 break-all font-medium text-foreground">{selectedStudent.email ?? 'Non renseignée'}</dd></div><div className="flex gap-2"><Phone className="mt-0.5 h-4 w-4 text-primary" /><div><dt className="text-muted-foreground">Téléphone</dt><dd className="mt-1 font-medium text-foreground">{selectedStudent.phone_number ?? 'Non renseigné'}</dd></div></div><div><dt className="text-muted-foreground">Demande envoyée le</dt><dd className="mt-1 font-medium text-foreground">{new Date(selectedStudent.created_at).toLocaleString('fr-FR')}</dd></div><div><dt className="text-muted-foreground">E-mail</dt><dd className={`mt-1 font-medium ${selectedStudent.email_confirmed ? 'text-success' : 'text-warning-foreground'}`}>{selectedStudent.email_confirmed ? 'Confirmé' : 'Non confirmé'}</dd></div></dl>}
+          {selectedStudent && <dl className="space-y-4 text-sm"><div><dt className="text-muted-foreground">Pseudonyme</dt><dd className="mt-1 font-medium text-foreground">{selectedStudent.display_name}</dd></div><div><dt className="text-muted-foreground">Classe demandée</dt><dd className="mt-1 font-medium text-foreground">{selectedStudent.requested_class ? `${selectedStudent.requested_class.code} — ${selectedStudent.requested_class.name}` : 'Non renseignée'}</dd></div><div><dt className="text-muted-foreground">Adresse e-mail</dt><dd className="mt-1 break-all font-medium text-foreground">{selectedStudent.email ? <a href={`mailto:${selectedStudent.email}`} className="text-primary hover:underline">{selectedStudent.email}</a> : 'Non renseignée'}</dd></div><div className="flex gap-2"><Phone className="mt-0.5 h-4 w-4 text-primary" /><div><dt className="text-muted-foreground">Téléphone</dt><dd className="mt-1 font-medium text-foreground">{selectedStudent.phone_number ? <a href={whatsappUrl(selectedStudent.phone_number)} target="_blank" rel="noreferrer" className="text-primary hover:underline">{selectedStudent.phone_number}</a> : 'Non renseigné'}</dd></div></div><div><dt className="text-muted-foreground">Demande envoyée le</dt><dd className="mt-1 font-medium text-foreground">{new Date(selectedStudent.created_at).toLocaleString('fr-FR')}</dd></div><div><dt className="text-muted-foreground">E-mail</dt><dd className={`mt-1 font-medium ${selectedStudent.email_confirmed ? 'text-success' : 'text-warning-foreground'}`}>{selectedStudent.email_confirmed ? 'Confirmé' : 'Non confirmé'}</dd></div></dl>}
         </DialogContent>
       </Dialog>
     </div>

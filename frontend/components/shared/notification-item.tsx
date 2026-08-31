@@ -1,7 +1,7 @@
 'use client';
 
 import { cn } from '@/lib/utils';
-import { Bell, MessageCircle, FileText, ShieldAlert, Info } from 'lucide-react';
+import { Bell, CalendarDays, MessageCircle, FileText, ShieldAlert, Info } from 'lucide-react';
 import type { Notification } from '@/lib/types';
 
 function timeAgo(iso: string): string {
@@ -19,6 +19,7 @@ const iconMap = {
   new_reply: { icon: Bell, cls: 'bg-primary/10 text-primary' },
   moderation: { icon: ShieldAlert, cls: 'bg-warning/10 text-warning' },
   instruction: { icon: MessageCircle, cls: 'bg-accent/10 text-accent' },
+  meeting: { icon: CalendarDays, cls: 'bg-primary/10 text-primary' },
   system: { icon: Info, cls: 'bg-secondary text-muted-foreground' },
 };
 

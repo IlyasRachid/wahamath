@@ -20,6 +20,7 @@ import {
   Shield,
   Users,
   Activity,
+  CalendarDays,
   X,
 } from 'lucide-react';
 import { WahaLogo } from '@/components/brand/logo';
@@ -55,6 +56,7 @@ export function AppShell({ role, navGroups, bottomNav, user, children }: Props) 
   const [reportCount, setReportCount] = useState(0);
   const [enrollmentCount, setEnrollmentCount] = useState(0);
   const [notificationCount, setNotificationCount] = useState(0);
+  const [meetingNotificationCount, setMeetingNotificationCount] = useState(0);
   const previousQuestionCount = useRef<number | null>(null);
   const previousReportCount = useRef<number | null>(null);
   const previousEnrollmentCount = useRef<number | null>(null);
@@ -77,7 +79,7 @@ export function AppShell({ role, navGroups, bottomNav, user, children }: Props) 
       if (revisions.ok) {
         const nextRevisions = Object.fromEntries((await revisions.json()).items.map((item: { resource: string; updated_at: string }) => [item.resource, item.updated_at]));
         const changed = Object.keys(nextRevisions).filter((resource) => previousRevisions.current[resource] && previousRevisions.current[resource] !== nextRevisions[resource]);
-        if (changed.length) invalidateCacheTags(...changed.filter((resource): resource is 'exercises' | 'classes' | 'questions' | 'comments' | 'notifications' | 'reports' | 'enrollments' | 'instructions' => ['exercises', 'classes', 'questions', 'comments', 'notifications', 'reports', 'enrollments', 'instructions'].includes(resource)));
+        if (changed.length) invalidateCacheTags(...changed.filter((resource): resource is 'exercises' | 'classes' | 'questions' | 'comments' | 'notifications' | 'reports' | 'enrollments' | 'instructions' | 'meetings' => ['exercises', 'classes', 'questions', 'comments', 'notifications', 'reports', 'enrollments', 'instructions', 'meetings'].includes(resource)));
         previousRevisions.current = nextRevisions;
       }
       const questions = await fetch(`${apiUrl}/api/questions`, { headers });
@@ -103,6 +105,7 @@ export function AppShell({ role, navGroups, bottomNav, user, children }: Props) 
         }
         previousNotificationCount.current = nextCount;
         setNotificationCount(nextCount);
+        setMeetingNotificationCount(role === 'student' ? notificationItems.filter((item) => !item.read_at && item.type === 'meeting').length : 0);
       }
       if (role === 'teacher') {
         const enrollments = await fetch(`${apiUrl}/api/admin/students/pending`, { headers });
@@ -134,7 +137,11 @@ export function AppShell({ role, navGroups, bottomNav, user, children }: Props) 
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
       const response = await fetch(`${apiUrl}/api/notifications`, { headers: { Authorization: `Bearer ${session.access_token}` } });
-      if (response.ok) setNotificationCount((await response.json()).items.filter((item: { read_at: string | null; type: string }) => !item.read_at && (role !== 'teacher' || item.type === 'instruction')).length);
+      if (response.ok) {
+        const items = (await response.json()).items as { read_at: string | null; type: string }[];
+        setNotificationCount(items.filter((item) => !item.read_at && (role !== 'teacher' || item.type === 'instruction')).length);
+        setMeetingNotificationCount(role === 'student' ? items.filter((item) => !item.read_at && item.type === 'meeting').length : 0);
+      }
     };
     window.addEventListener('wahamath-notifications-updated', refreshNotifications);
     return () => window.removeEventListener('wahamath-notifications-updated', refreshNotifications);
@@ -148,6 +155,16 @@ export function AppShell({ role, navGroups, bottomNav, user, children }: Props) 
   const isActive = (href: string) => {
     if (href === '/eleve' || href === '/prof') return pathname === href;
     return pathname.startsWith(href);
+  };
+
+  const badgeCount = (href: string) => {
+    if (href === '/prof/moderation') return reportCount;
+    if (href === '/prof/inscriptions') return enrollmentCount;
+    if (href === '/prof/instructions') return notificationCount;
+    if (href === '/eleve/notifications') return notificationCount;
+    if (href === '/eleve/reunions') return meetingNotificationCount;
+    if (href.endsWith('/questions')) return questionCount;
+    return 0;
   };
 
   const SidebarContent = ({ onNavigate }: { onNavigate?: () => void }) => (
@@ -183,9 +200,9 @@ export function AppShell({ role, navGroups, bottomNav, user, children }: Props) 
                   >
                     <item.icon className="h-4.5 w-4.5 shrink-0" />
                     <span className="flex-1">{item.label}</span>
-                    {(item.href === '/prof/moderation' ? reportCount : item.href === '/prof/inscriptions' ? enrollmentCount : item.href === '/prof/instructions' ? notificationCount : item.href.endsWith('/questions') ? questionCount : item.badge) ? (
+                    {(badgeCount(item.href) || item.badge) ? (
                       <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1.5 text-[11px] font-bold text-white">
-                        {item.href === '/prof/moderation' ? reportCount : item.href === '/prof/inscriptions' ? enrollmentCount : item.href === '/prof/instructions' ? notificationCount : item.href.endsWith('/questions') ? questionCount : item.badge}
+                        {badgeCount(item.href) || item.badge}
                       </span>
                     ) : null}
                   </Link>
@@ -328,6 +345,7 @@ export const studentNav: NavGroup[] = [
       { label: 'Mes classes', href: '/eleve/classes', icon: BookOpen },
       { label: 'Exercices', href: '/eleve/exercices', icon: FileText },
       { label: 'Questions', href: '/eleve/questions', icon: HelpCircle },
+      { label: 'Réunions', href: '/eleve/reunions', icon: CalendarDays },
       { label: 'Instructions', href: '/eleve/instructions', icon: MessageSquare },
       { label: 'Notifications', href: '/eleve/notifications', icon: Bell },
     ],
@@ -348,6 +366,7 @@ export const teacherNav: NavGroup[] = [
       { label: 'Élèves', href: '/prof/eleves', icon: Users },
       { label: 'Inscriptions', href: '/prof/inscriptions', icon: Users },
       { label: 'Questions', href: '/prof/questions', icon: HelpCircle },
+      { label: 'Réunions', href: '/prof/reunions', icon: CalendarDays },
       { label: 'Instructions', href: '/prof/instructions', icon: MessageSquare },
       { label: 'Modération', href: '/prof/moderation', icon: Shield },
       { label: 'Activité', href: '/prof/activite', icon: Activity },

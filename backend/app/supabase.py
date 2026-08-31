@@ -64,6 +64,16 @@ class PasswordChangePayload(BaseModel):
     password: str
 
 
+class MeetingPayload(BaseModel):
+    title: str
+    description: str | None = None
+    starts_at: str
+    ends_at: str
+    meet_url: str
+    class_ids: list[str]
+    participant_ids: list[str] | None = None
+
+
 async def create_notifications(client: httpx.AsyncClient, headers: dict[str, str], recipient_ids: list[str], notification_type: str, title: str, body: str, href: str) -> None:
     if not recipient_ids:
         return
@@ -1382,3 +1392,202 @@ async def delete_exercise(
         # must not report a failed deletion after the exercise is already gone.
         await client.delete(f"/storage/v1/object/exercise-images/{exercise['image_path']}", headers=headers)
     return {'status': 'deleted'}
+
+
+def _meeting_payload(payload: MeetingPayload) -> tuple[dict, list[str]]:
+    title = ' '.join(payload.title.split())
+    description = ' '.join(payload.description.split()) if payload.description else None
+    meet_url = payload.meet_url.strip().rstrip('/')
+    class_ids = list(dict.fromkeys(payload.class_ids))
+    if not 3 <= len(title) <= 160:
+        raise HTTPException(status_code=400, detail='Le titre doit contenir entre 3 et 160 caractères.')
+    if description and len(description) > 1000:
+        raise HTTPException(status_code=400, detail='La description ne peut pas dépasser 1 000 caractères.')
+    if not re.fullmatch(r'https://meet\.google\.com/[a-z-]+', meet_url):
+        raise HTTPException(status_code=400, detail='Saisissez un lien Google Meet valide.')
+    if not class_ids:
+        raise HTTPException(status_code=400, detail='Sélectionnez au moins une classe.')
+    try:
+        starts_at = datetime.fromisoformat(payload.starts_at.replace('Z', '+00:00'))
+        ends_at = datetime.fromisoformat(payload.ends_at.replace('Z', '+00:00'))
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail='Les dates de la réunion sont invalides.') from error
+    if starts_at.tzinfo is None or ends_at.tzinfo is None:
+        raise HTTPException(status_code=400, detail='Les dates de la réunion doivent inclure un fuseau horaire.')
+    starts_at = starts_at.astimezone(timezone.utc)
+    ends_at = ends_at.astimezone(timezone.utc)
+    if ends_at <= starts_at:
+        raise HTTPException(status_code=400, detail='La fin doit être après le début de la réunion.')
+    return {
+        'title': title,
+        'description': description,
+        'starts_at': starts_at.isoformat(),
+        'ends_at': ends_at.isoformat(),
+        'meet_url': meet_url,
+        'updated_at': datetime.now(timezone.utc).isoformat(),
+    }, class_ids
+
+
+async def _validate_meeting_classes(client: httpx.AsyncClient, headers: dict[str, str], class_ids: list[str]) -> list[dict]:
+    response = await client.get(
+        '/rest/v1/classes',
+        params={'id': f"in.({','.join(class_ids)})", 'select': 'id,code,name'},
+        headers=headers,
+    )
+    classes = response.json() if response.is_success else []
+    if len(classes) != len(class_ids):
+        raise HTTPException(status_code=404, detail='Une ou plusieurs classes sont introuvables.')
+    return classes
+
+
+async def _default_meeting_participants(client: httpx.AsyncClient, headers: dict[str, str], class_ids: list[str]) -> list[str]:
+    memberships = await client.get(
+        '/rest/v1/class_memberships',
+        params={'class_id': f"in.({','.join(class_ids)})", 'select': 'profile_id'},
+        headers=headers,
+    )
+    profile_ids = list({item['profile_id'] for item in memberships.json()}) if memberships.is_success else []
+    if not profile_ids:
+        return []
+    profiles = await client.get(
+        '/rest/v1/profiles',
+        params={'id': f"in.({','.join(profile_ids)})", 'role': 'eq.student', 'status': 'eq.active', 'select': 'id'},
+        headers=headers,
+    )
+    return [item['id'] for item in profiles.json()] if profiles.is_success else []
+
+
+async def _resolve_meeting_participants(client: httpx.AsyncClient, headers: dict[str, str], class_ids: list[str], participant_ids: list[str] | None) -> list[str]:
+    if participant_ids is None:
+        return await _default_meeting_participants(client, headers, class_ids)
+    participant_ids = list(dict.fromkeys(participant_ids))
+    if not participant_ids:
+        raise HTTPException(status_code=400, detail='Sélectionnez au moins un élève.')
+    response = await client.get(
+        '/rest/v1/profiles',
+        params={'id': f"in.({','.join(participant_ids)})", 'role': 'eq.student', 'status': 'eq.active', 'select': 'id'},
+        headers=headers,
+    )
+    students = response.json() if response.is_success else []
+    if len(students) != len(participant_ids):
+        raise HTTPException(status_code=400, detail='Un ou plusieurs élèves sélectionnés ne sont pas actifs.')
+    return [student['id'] for student in students]
+
+
+def _normalise_meeting(meeting: dict, allowed_class_ids: set[str] | None = None, include_participants: bool = False) -> dict:
+    classes = []
+    for mapping in meeting.get('meeting_classes') or []:
+        class_item = mapping.get('classes')
+        if class_item and (allowed_class_ids is None or class_item['id'] in allowed_class_ids):
+            classes.append(class_item)
+    result = {key: meeting.get(key) for key in ('id', 'title', 'description', 'starts_at', 'ends_at', 'meet_url', 'status', 'created_at')} | {'classes': classes}
+    if include_participants:
+        result['participants'] = [item.get('profiles') for item in meeting.get('meeting_participants') or [] if item.get('profiles')]
+    return result
+
+
+async def list_meetings(
+    profile: dict[str, str] = Depends(require_active_user),
+    settings: Settings = Depends(server_settings),
+) -> dict:
+    headers = {'apikey': settings.supabase_secret_key, 'Content-Type': 'application/json'}
+    meeting_select = 'id,title,description,starts_at,ends_at,meet_url,status,created_at,meeting_classes(class_id,classes(id,code,name)),meeting_participants(profile_id,profiles(id,display_name))'
+    async with httpx.AsyncClient(base_url=settings.supabase_url, timeout=20) as client:
+        if profile['role'] == 'teacher':
+            response = await client.get('/rest/v1/meetings', params={'select': meeting_select, 'order': 'starts_at.desc'}, headers=headers)
+            if response.is_error:
+                raise HTTPException(status_code=502, detail='Impossible de charger les réunions.')
+            return {'items': [_normalise_meeting(item, include_participants=True) for item in response.json()]}
+
+        mappings = await client.get(
+            '/rest/v1/meeting_participants',
+            params={'profile_id': f"eq.{profile['id']}", 'select': f'meeting_id,meetings({meeting_select})'},
+            headers=headers,
+        )
+        if mappings.is_error:
+            raise HTTPException(status_code=502, detail='Impossible de charger les réunions.')
+    unique: dict[str, dict] = {}
+    for mapping in mappings.json():
+        meeting = mapping.get('meetings')
+        if meeting and meeting.get('status') == 'scheduled':
+            unique[meeting['id']] = _normalise_meeting(meeting)
+    return {'items': sorted(unique.values(), key=lambda item: item['starts_at'], reverse=True)}
+
+
+async def create_meeting(
+    payload: MeetingPayload,
+    teacher: dict[str, str] = Depends(require_teacher),
+    settings: Settings = Depends(server_settings),
+) -> dict:
+    meeting, class_ids = _meeting_payload(payload)
+    headers = {'apikey': settings.supabase_secret_key, 'Content-Type': 'application/json', 'Prefer': 'return=representation'}
+    async with httpx.AsyncClient(base_url=settings.supabase_url, timeout=20) as client:
+        await _validate_meeting_classes(client, headers, class_ids)
+        response = await client.post('/rest/v1/meetings', headers=headers, json={**meeting, 'teacher_id': teacher['id']})
+        if response.is_error or not response.json():
+            raise HTTPException(status_code=502, detail='Impossible de créer la réunion.')
+        created = response.json()[0]
+        classes_response = await client.post('/rest/v1/meeting_classes', headers=headers, json=[{'meeting_id': created['id'], 'class_id': class_id} for class_id in class_ids])
+        if classes_response.is_error:
+            raise HTTPException(status_code=502, detail='Impossible d’associer les classes à la réunion.')
+        recipients = await _resolve_meeting_participants(client, headers, class_ids, payload.participant_ids)
+        participants_response = await client.post('/rest/v1/meeting_participants', headers=headers, json=[{'meeting_id': created['id'], 'profile_id': profile_id} for profile_id in recipients])
+        if participants_response.is_error:
+            raise HTTPException(status_code=502, detail='Impossible d’enregistrer les participants de la réunion.')
+        await create_notifications(client, headers, recipients, 'meeting', 'Nouvelle réunion Google Meet', created['title'], f"/eleve/reunions")
+    return {'meeting': created}
+
+
+async def update_meeting(
+    meeting_id: str,
+    payload: MeetingPayload,
+    teacher: dict[str, str] = Depends(require_teacher),
+    settings: Settings = Depends(server_settings),
+) -> dict:
+    meeting, class_ids = _meeting_payload(payload)
+    headers = {'apikey': settings.supabase_secret_key, 'Content-Type': 'application/json', 'Prefer': 'return=representation'}
+    async with httpx.AsyncClient(base_url=settings.supabase_url, timeout=20) as client:
+        current = await client.get('/rest/v1/meetings', params={'id': f'eq.{meeting_id}', 'teacher_id': f"eq.{teacher['id']}", 'select': 'id'}, headers=headers)
+        if current.is_error or not current.json():
+            raise HTTPException(status_code=404, detail='Réunion introuvable ou non modifiable.')
+        await _validate_meeting_classes(client, headers, class_ids)
+        response = await client.patch('/rest/v1/meetings', params={'id': f'eq.{meeting_id}'}, headers=headers, json=meeting)
+        if response.is_error or not response.json():
+            raise HTTPException(status_code=502, detail='Impossible de modifier la réunion.')
+        removed = await client.delete('/rest/v1/meeting_classes', params={'meeting_id': f'eq.{meeting_id}'}, headers=headers)
+        if removed.is_error:
+            raise HTTPException(status_code=502, detail='Impossible de mettre à jour les classes de la réunion.')
+        linked = await client.post('/rest/v1/meeting_classes', headers=headers, json=[{'meeting_id': meeting_id, 'class_id': class_id} for class_id in class_ids])
+        if linked.is_error:
+            raise HTTPException(status_code=502, detail='Impossible de mettre à jour les classes de la réunion.')
+        participant_remove = await client.delete('/rest/v1/meeting_participants', params={'meeting_id': f'eq.{meeting_id}'}, headers=headers)
+        if participant_remove.is_error:
+            raise HTTPException(status_code=502, detail='Impossible de mettre à jour les participants de la réunion.')
+        recipients = await _resolve_meeting_participants(client, headers, class_ids, payload.participant_ids)
+        participant_add = await client.post('/rest/v1/meeting_participants', headers=headers, json=[{'meeting_id': meeting_id, 'profile_id': profile_id} for profile_id in recipients])
+        if participant_add.is_error:
+            raise HTTPException(status_code=502, detail='Impossible de mettre à jour les participants de la réunion.')
+        await create_notifications(client, headers, recipients, 'meeting', 'Réunion modifiée', response.json()[0]['title'], '/eleve/reunions')
+    return {'meeting': response.json()[0]}
+
+
+async def cancel_meeting(
+    meeting_id: str,
+    teacher: dict[str, str] = Depends(require_teacher),
+    settings: Settings = Depends(server_settings),
+) -> dict:
+    headers = {'apikey': settings.supabase_secret_key, 'Content-Type': 'application/json', 'Prefer': 'return=representation'}
+    async with httpx.AsyncClient(base_url=settings.supabase_url, timeout=20) as client:
+        current = await client.get('/rest/v1/meetings', params={'id': f'eq.{meeting_id}', 'teacher_id': f"eq.{teacher['id']}", 'select': 'id,title,status'}, headers=headers)
+        if current.is_error or not current.json():
+            raise HTTPException(status_code=404, detail='Réunion introuvable ou non modifiable.')
+        meeting = current.json()[0]
+        if meeting['status'] == 'cancelled':
+            return {'status': 'cancelled'}
+        participants = await client.get('/rest/v1/meeting_participants', params={'meeting_id': f'eq.{meeting_id}', 'select': 'profile_id'}, headers=headers)
+        recipient_ids = [item['profile_id'] for item in participants.json()] if participants.is_success else []
+        response = await client.patch('/rest/v1/meetings', params={'id': f'eq.{meeting_id}'}, headers=headers, json={'status': 'cancelled', 'updated_at': datetime.now(timezone.utc).isoformat()})
+        if response.is_error:
+            raise HTTPException(status_code=502, detail='Impossible d’annuler la réunion.')
+        await create_notifications(client, headers, recipient_ids, 'meeting', 'Réunion annulée', meeting['title'], '/eleve/reunions')
+    return {'status': 'cancelled'}

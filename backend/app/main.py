@@ -6,6 +6,8 @@ from app.supabase import (
     create_exercise,
     create_comment,
     create_chapter,
+    create_meeting,
+    cancel_meeting,
     close_instruction_thread,
     delete_student,
     delete_chapter,
@@ -25,6 +27,7 @@ from app.supabase import (
     list_notifications,
     list_hidden_comments,
     list_instruction_threads,
+    list_meetings,
     mark_notifications_read,
     mark_instruction_notifications_read,
     list_reports,
@@ -37,6 +40,7 @@ from app.supabase import (
     update_exercise,
     update_exercise_publication,
     update_profile,
+    update_meeting,
 )
 
 settings = get_settings()
@@ -65,6 +69,10 @@ def health_check() -> dict[str, str]:
 app.post('/api/exercises', status_code=201, tags=['exercises'])(create_exercise)
 app.get('/api/exercises', tags=['exercises'])(list_exercises)
 app.get('/api/classes', tags=['classes'])(list_classes)
+app.get('/api/meetings', tags=['meetings'])(list_meetings)
+app.post('/api/meetings', status_code=201, tags=['meetings'])(create_meeting)
+app.patch('/api/meetings/{meeting_id}', tags=['meetings'])(update_meeting)
+app.post('/api/meetings/{meeting_id}/cancel', tags=['meetings'])(cancel_meeting)
 app.post('/api/classes/{class_id}/chapters', status_code=201, tags=['classes'])(create_chapter)
 app.delete('/api/classes/{class_id}/chapters/{chapter_id}', tags=['classes'])(delete_chapter)
 app.get('/api/profile', tags=['profile'])(get_profile)

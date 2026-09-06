@@ -4,7 +4,7 @@ import { apiUrl } from '@/lib/api-url';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { FileQuestion, Maximize2, MessageCircle, Minimize2, Pencil, Send, ZoomIn, ZoomOut } from 'lucide-react';
+import { FileQuestion, MessageCircle, Pencil, Send } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 import { cachedApiGet, invalidateApiCache, invalidateCacheTags, isApiCacheStale } from '@/lib/api-cache';
 import { Breadcrumbs, PageHeader } from '@/components/shared/page-header';
@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { CommentThread } from '@/components/shared/comment-thread';
+import { ExerciseImageViewer } from '@/components/shared/exercise-image-viewer';
 import type { Comment } from '@/lib/types';
 
 type RemoteExercise = {
@@ -38,8 +39,6 @@ function ExerciseViewer({
   const [exercise, setExercise] = useState<RemoteExercise | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [zoom, setZoom] = useState(1);
-  const [fullscreen, setFullscreen] = useState(false);
   const [comments, setComments] = useState<Comment[]>([]);
   const [commentText, setCommentText] = useState('');
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
@@ -129,15 +128,6 @@ function ExerciseViewer({
     );
   }
 
-  const image = (
-    <img
-      src={exercise.image_url}
-      alt={`Énoncé : ${exercise.title}`}
-      className="w-full rounded-lg shadow-lg ring-1 ring-border"
-      style={{ width: `${zoom * 100}%`, maxWidth: zoom > 1 ? 'none' : '720px' }}
-    />
-  );
-
   const postComment = async () => {
     if (!commentText.trim()) return;
     const { data: { session } } = await supabase.auth.getSession();
@@ -200,18 +190,7 @@ function ExerciseViewer({
         {isTeacherView && <Button asChild size="sm" variant="outline"><Link href={`/prof/exercices/${params.id}/modifier`}><Pencil className="h-4 w-4" />Modifier</Link></Button>}
       </PageHeader>
 
-      <Card className="overflow-hidden">
-        <div className="flex items-center justify-between border-b border-border bg-secondary/30 px-4 py-2.5">
-          <p className="text-sm font-medium text-foreground">Énoncé de l’exercice</p>
-          <div className="flex items-center gap-1">
-            <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Réduire le zoom" onClick={() => setZoom((value) => Math.max(0.5, value - 0.25))}><ZoomOut className="h-4 w-4" /></Button>
-            <span className="px-1 text-xs text-muted-foreground">{Math.round(zoom * 100)}%</span>
-            <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Augmenter le zoom" onClick={() => setZoom((value) => Math.min(2.5, value + 0.25))}><ZoomIn className="h-4 w-4" /></Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Afficher l’énoncé en plein écran" onClick={() => setFullscreen(true)}><Maximize2 className="h-4 w-4" /></Button>
-          </div>
-        </div>
-        <CardContent className="overflow-auto bg-secondary/40 p-4 sm:p-8"><div className="mx-auto transition-transform duration-200">{image}</div></CardContent>
-      </Card>
+      <ExerciseImageViewer src={exercise.image_url} alt={`Énoncé : ${exercise.title}`} title={exercise.title} />
 
       <div className="space-y-1"><p className="text-xs text-muted-foreground">Publié le {new Date(exercise.published_at).toLocaleDateString('fr-FR')}</p>{exercise.description && <p className="text-sm text-muted-foreground">{exercise.description}</p>}</div>
 
@@ -226,12 +205,6 @@ function ExerciseViewer({
         {comments.length === 0 ? <p className="rounded-xl border border-dashed border-border px-6 py-10 text-center text-sm text-muted-foreground">Aucune question pour le moment.</p> : <CommentThread comments={comments} locked={false} onReply={setReplyingTo} onReport={reportComment} isTeacher={isTeacherView} onModerate={moderateComment} />}
       </section>
 
-      {fullscreen && (
-        <div className="fixed inset-0 z-50 flex flex-col bg-background/95 backdrop-blur-sm">
-          <div className="flex items-center justify-between border-b border-border px-4 py-3"><p className="text-sm font-medium text-foreground">{exercise.title}</p><Button variant="ghost" size="icon" aria-label="Quitter le plein écran" onClick={() => setFullscreen(false)}><Minimize2 className="h-4 w-4" /></Button></div>
-          <div className="flex-1 overflow-auto bg-secondary/40 p-4 sm:p-8"><div className="mx-auto">{image}</div></div>
-        </div>
-      )}
     </div>
   );
 }

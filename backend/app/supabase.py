@@ -1122,27 +1122,31 @@ async def list_presence(
     """Return presence only after the server has authenticated a teacher."""
     headers = {'apikey': settings.supabase_secret_key}
     async with httpx.AsyncClient(base_url=settings.supabase_url, timeout=20) as client:
-        response = await client.get(
+        profiles_response = await client.get(
             '/rest/v1/profiles',
             params={
                 'status': 'eq.active',
-                'select': 'id,display_name,user_presence(last_seen)',
+                'select': 'id,display_name',
                 'order': 'display_name.asc',
             },
             headers=headers,
         )
-    if response.is_error:
+        presence_response = await client.get(
+            '/rest/v1/user_presence',
+            params={'select': 'profile_id,last_seen'},
+            headers=headers,
+        )
+    if profiles_response.is_error or presence_response.is_error:
         raise HTTPException(status_code=502, detail='Impossible de charger les statuts de presence.')
 
     now = datetime.now(timezone.utc)
+    last_seen_by_profile = {
+        presence['profile_id']: presence['last_seen']
+        for presence in presence_response.json()
+    }
     items = []
-    for user in response.json():
-        presence = user.pop('user_presence', None)
-        # PostgREST embeds a one-to-one relation as an object, but accept the
-        # array form too so this remains compatible with schema-cache changes.
-        if isinstance(presence, list):
-            presence = presence[0] if presence else None
-        last_seen = presence.get('last_seen') if isinstance(presence, dict) else None
+    for user in profiles_response.json():
+        last_seen = last_seen_by_profile.get(user['id'])
         seen_at = datetime.fromisoformat(last_seen.replace('Z', '+00:00')) if last_seen else None
         items.append({
             **user,

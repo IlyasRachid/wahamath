@@ -29,6 +29,7 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { supabase } from '@/lib/supabase/client';
 import { clearApiCache, invalidateCacheTags, peekApiCache, preloadAuthenticatedData } from '@/lib/api-cache';
 import { ThemeToggle } from '@/components/shared/theme-toggle';
+import { PresenceHeartbeat } from '@/components/shared/presence-heartbeat';
 
 export type NavItem = {
   label: string;
@@ -264,6 +265,7 @@ export function AppShell({ role, navGroups, bottomNav, user, children }: Props) 
 
   return (
     <div className="min-h-screen bg-background">
+      <PresenceHeartbeat />
       {/* Desktop sidebar */}
       <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 lg:block">
         <SidebarContent />

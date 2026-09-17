@@ -166,6 +166,28 @@ async def update_profile(
     return response.json()[0]
 
 
+async def record_presence_heartbeat(
+    profile: dict[str, str] = Depends(require_active_user),
+    settings: Settings = Depends(server_settings),
+) -> dict[str, str]:
+    """Store a server-issued timestamp for the authenticated user's activity."""
+    headers = {
+        'apikey': settings.supabase_secret_key,
+        'Content-Type': 'application/json',
+        'Prefer': 'resolution=merge-duplicates,return=minimal',
+    }
+    async with httpx.AsyncClient(base_url=settings.supabase_url, timeout=15) as client:
+        response = await client.post(
+            '/rest/v1/user_presence',
+            params={'on_conflict': 'profile_id'},
+            headers=headers,
+            json={'profile_id': profile['id'], 'last_seen': datetime.now(timezone.utc).isoformat()},
+        )
+    if response.is_error:
+        raise HTTPException(status_code=502, detail="Impossible d'enregistrer l'activite.")
+    return {'status': 'recorded'}
+
+
 async def get_student_password_change_status(
     profile: dict[str, str] = Depends(require_active_user),
     settings: Settings = Depends(server_settings),
@@ -1091,6 +1113,43 @@ async def list_reports(_: dict[str, str] = Depends(require_teacher), settings: S
             author=data.get('profiles') or {}; exercise=data.get('exercises') or {}
             items.append({**report,'comment':data.get('body','Commentaire supprimé'),'author':author.get('display_name','Utilisateur'),'exercise_title':exercise.get('title','Exercice')})
     return {'items':items}
+
+
+async def list_presence(
+    _: dict[str, str] = Depends(require_teacher),
+    settings: Settings = Depends(server_settings),
+) -> dict[str, list[dict]]:
+    """Return presence only after the server has authenticated a teacher."""
+    headers = {'apikey': settings.supabase_secret_key}
+    async with httpx.AsyncClient(base_url=settings.supabase_url, timeout=20) as client:
+        response = await client.get(
+            '/rest/v1/profiles',
+            params={
+                'status': 'eq.active',
+                'select': 'id,display_name,user_presence(last_seen)',
+                'order': 'display_name.asc',
+            },
+            headers=headers,
+        )
+    if response.is_error:
+        raise HTTPException(status_code=502, detail='Impossible de charger les statuts de presence.')
+
+    now = datetime.now(timezone.utc)
+    items = []
+    for user in response.json():
+        presence = user.pop('user_presence', None)
+        # PostgREST embeds a one-to-one relation as an object, but accept the
+        # array form too so this remains compatible with schema-cache changes.
+        if isinstance(presence, list):
+            presence = presence[0] if presence else None
+        last_seen = presence.get('last_seen') if isinstance(presence, dict) else None
+        seen_at = datetime.fromisoformat(last_seen.replace('Z', '+00:00')) if last_seen else None
+        items.append({
+            **user,
+            'last_seen': last_seen,
+            'online': bool(seen_at and (now - seen_at).total_seconds() <= 60),
+        })
+    return {'items': items}
 
 
 async def list_hidden_comments(

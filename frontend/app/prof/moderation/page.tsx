@@ -9,6 +9,7 @@ import { PageHeader } from '@/components/shared/page-header';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { OnlineStatusPanel } from '@/components/shared/online-status-panel';
 
 type Report = { id: string; comment_id: string; reason: string; comment: string; author: string; exercise_title: string };
 type HiddenComment = { id: string; body: string; created_at: string; author: string; exercise_title: string };
@@ -109,5 +110,6 @@ export default function ModerationPage() {
       <div><h2 className="text-lg font-semibold text-foreground">Commentaires masqués</h2><p className="text-sm text-muted-foreground">Restaurez un commentaire masqué par erreur.</p></div>
       {loading ? null : hiddenComments.length === 0 ? <p className="text-sm text-muted-foreground">Aucun commentaire masqué.</p> : <div className="space-y-3">{hiddenComments.map((comment) => <Card key={comment.id}><CardContent className="p-4"><p className="text-sm font-semibold text-foreground">{comment.author} · {comment.exercise_title}</p><p className="mt-2 rounded-lg bg-secondary p-3 text-sm">{comment.body}</p><Button className="mt-3" variant="outline" size="sm" disabled={busyId === comment.id} onClick={() => restore(comment)}><RotateCcw className="h-4 w-4" />Restaurer le commentaire</Button></CardContent></Card>)}{hasMoreHiddenComments && <Button className="w-full" variant="outline" disabled={loadingMore} onClick={loadMoreHiddenComments}><ChevronDown className="h-4 w-4" />{loadingMore ? 'Chargement…' : 'Charger plus de commentaires'}</Button>}</div>}
     </section>
+    <OnlineStatusPanel />
   </div>;
 }

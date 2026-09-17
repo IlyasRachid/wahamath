@@ -25,6 +25,7 @@ from app.supabase import (
     list_pending_students,
     list_questions,
     list_notifications,
+    list_presence,
     list_hidden_comments,
     list_instruction_threads,
     list_meetings,
@@ -35,6 +36,7 @@ from app.supabase import (
     moderate_comment,
     post_instruction_message,
     report_comment,
+    record_presence_heartbeat,
     reopen_instruction_thread,
     send_student_instruction,
     update_exercise,
@@ -78,6 +80,7 @@ app.delete('/api/classes/{class_id}/chapters/{chapter_id}', tags=['classes'])(de
 app.get('/api/profile', tags=['profile'])(get_profile)
 app.get('/api/revisions', tags=['system'])(get_data_revisions)
 app.patch('/api/profile', tags=['profile'])(update_profile)
+app.post('/api/presence/heartbeat', tags=['presence'])(record_presence_heartbeat)
 app.get('/api/exercises/{exercise_id}', tags=['exercises'])(get_exercise)
 app.put('/api/exercises/{exercise_id}', tags=['exercises'])(update_exercise)
 app.patch('/api/exercises/{exercise_id}/publication', tags=['exercises'])(update_exercise_publication)
@@ -92,6 +95,7 @@ app.post('/api/notifications/{notification_id}/read', tags=['notifications'])(ma
 app.post('/api/comments/{comment_id}/moderate', tags=['moderation'])(moderate_comment)
 app.post('/api/comments/{comment_id}/report', tags=['moderation'])(report_comment)
 app.get('/api/moderation/reports', tags=['moderation'])(list_reports)
+app.get('/api/moderation/presence', tags=['moderation'])(list_presence)
 app.get('/api/moderation/hidden-comments', tags=['moderation'])(list_hidden_comments)
 app.post('/api/moderation/reports/{report_id}/dismiss', tags=['moderation'])(dismiss_report)
 app.get('/api/admin/students/pending', tags=['administration'])(list_pending_students)

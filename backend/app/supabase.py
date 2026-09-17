@@ -1152,7 +1152,7 @@ async def list_presence(
         items.append({
             **user,
             'last_seen': last_seen,
-            'online': bool(seen_at and (now - seen_at).total_seconds() <= 60),
+            'online': bool(seen_at and (now - seen_at).total_seconds() <= 30),
         })
     return {'items': items}
 

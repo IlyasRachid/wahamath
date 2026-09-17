@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 type PresenceUser = { id: string; display_name: string; last_seen: string | null; online: boolean };
-const REFRESH_INTERVAL_MS = 30_000;
+const REFRESH_INTERVAL_MS = 15_000;
 
 function formatLastSeen(lastSeen: string | null) {
   if (!lastSeen) return 'Jamais';
@@ -40,7 +40,7 @@ export function OnlineStatusPanel() {
     return () => { mounted = false; window.clearInterval(interval); document.removeEventListener('visibilitychange', handleVisibility); };
   }, []);
   return <section className="space-y-3">
-    <div><h2 className="text-lg font-semibold text-foreground">Statut en ligne</h2><p className="text-sm text-muted-foreground">Actualisé toutes les 30 secondes.</p></div>
+    <div><h2 className="text-lg font-semibold text-foreground">Statut en ligne</h2><p className="text-sm text-muted-foreground">Actualisé toutes les 15 secondes.</p></div>
     <Card><CardHeader className="pb-3"><CardTitle className="text-base">Utilisateurs</CardTitle></CardHeader><CardContent>
       {loading ? <p className="text-sm text-muted-foreground">Chargement des statuts…</p>
         : error ? <p className="text-sm text-destructive">{error}</p>

@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { apiUrl } from '@/lib/api-url';
 import { supabase } from '@/lib/supabase/client';
 
-const HEARTBEAT_INTERVAL_MS = 30_000;
+const HEARTBEAT_INTERVAL_MS = 15_000;
 
 /** Records activity while an authenticated workspace is visible. */
 export function PresenceHeartbeat() {

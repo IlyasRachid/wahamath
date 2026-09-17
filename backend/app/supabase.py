@@ -1136,8 +1136,16 @@ async def list_presence(
             params={'select': 'profile_id,last_seen'},
             headers=headers,
         )
-    if profiles_response.is_error or presence_response.is_error:
-        raise HTTPException(status_code=502, detail='Impossible de charger les statuts de presence.')
+    if profiles_response.is_error:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Profiles request failed ({profiles_response.status_code}): {profiles_response.text[:300]}",
+        )
+    if presence_response.is_error:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Presence request failed ({presence_response.status_code}): {presence_response.text[:300]}",
+        )
 
     now = datetime.now(timezone.utc)
     last_seen_by_profile = {

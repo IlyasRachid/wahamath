@@ -1,11 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import { ArrowRight, BookOpen, GraduationCap, MessageSquare, ShieldCheck } from 'lucide-react';
+import { ArrowRight, BookOpen, GraduationCap, MessageCircle, MessageSquare, ShieldCheck } from 'lucide-react';
 import { WahaLogo } from '@/components/brand/logo';
 import { MathMotifAxes, MathMotifFormula, MathMotifGrid, MathMotifIntegral, MathMotifSigma } from '@/components/math/motifs';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/shared/theme-toggle';
+
+const whatsappUrl = 'https://wa.me/212684915585';
+const whatsappQrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&format=svg&data=${encodeURIComponent(whatsappUrl)}`;
 
 export default function Home() {
   return (
@@ -111,6 +114,46 @@ export default function Home() {
           </Link>
         </div>
 
+        {/* WhatsApp contact */}
+        <section className="mx-auto mt-12 max-w-xl rounded-2xl border border-success/25 bg-card/90 p-5 shadow-sm backdrop-blur-sm sm:p-6">
+          <div className="flex flex-col items-center gap-5 text-center sm:flex-row sm:text-left">
+            <a
+              href={whatsappUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="shrink-0 rounded-xl bg-white p-2 shadow-sm transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+              aria-label="Ouvrir la discussion WhatsApp WahaMath"
+            >
+              <img
+                src={whatsappQrCodeUrl}
+                alt="QR code pour ouvrir la discussion WhatsApp WahaMath"
+                width={144}
+                height={144}
+                className="h-36 w-36"
+              />
+            </a>
+            <div>
+              <div className="flex items-center justify-center gap-2 text-success sm:justify-start">
+                <MessageCircle className="h-5 w-5" />
+                <p className="font-semibold">Une question ?</p>
+              </div>
+              <h2 className="mt-2 text-xl font-bold text-foreground">Écrivez-nous sur WhatsApp</h2>
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                Scannez le code avec votre téléphone pour ouvrir directement la discussion.
+              </p>
+              <a
+                href={whatsappUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
+              >
+                +212 684 915 585
+                <ArrowRight className="h-4 w-4" />
+              </a>
+            </div>
+          </div>
+        </section>
+
         {/* Feature highlights */}
         <div className="mx-auto mt-20 grid max-w-4xl gap-6 sm:grid-cols-3">
           {[
@@ -140,6 +183,10 @@ export default function Home() {
             Contact :{' '}
             <a href="mailto:wahamath@hotmail.com" className="hover:text-foreground hover:underline">
               wahamath@hotmail.com
+            </a>
+            {' · '}
+            <a href={whatsappUrl} target="_blank" rel="noreferrer" className="hover:text-foreground hover:underline">
+              WhatsApp
             </a>
           </p>
         </div>

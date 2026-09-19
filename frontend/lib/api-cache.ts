@@ -50,10 +50,9 @@ export function hydrateApiCache(userId: string) {
 
 export function peekApiCache<T>(path: string): T | null {
   const entry = cache.get(path) as CacheEntry<T> | undefined;
-  // Navigation cache is mutation-driven: keeping a tab fast is more useful
-  // than refetching unchanged data after an arbitrary timeout. Dynamic areas
-  // are invalidated by their polling/mutation paths instead.
-  if (!entry || entry.tags.some((tag) => dirtyTags.has(tag))) return null;
+  // Some API responses contain short-lived signed URLs (for example exercise
+  // images), so expired entries must be fetched again after a refresh.
+  if (!entry || entry.expiresAt <= Date.now() || entry.tags.some((tag) => dirtyTags.has(tag))) return null;
   return entry.data;
 }
 

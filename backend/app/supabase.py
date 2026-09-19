@@ -1203,7 +1203,7 @@ async def create_exercise(
     title: str = Form(),
     class_code: str = Form(),
     chapter_title: str = Form(),
-    difficulty: str = Form(),
+    difficulty: str = Form('moyen'),
     tags: str = Form(''),
     description: str = Form(''),
     publication_status: str = Form('brouillon'),

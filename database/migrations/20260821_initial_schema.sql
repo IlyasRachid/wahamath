@@ -49,7 +49,7 @@ create table public.exercises (
   description text,
   image_path text not null unique,
   image_alt text,
-  difficulty public.exercise_difficulty not null,
+  difficulty public.exercise_difficulty not null default 'moyen',
   tags text[] not null default '{}',
   publication_status public.exercise_publication_status not null default 'brouillon',
   published_at timestamptz,

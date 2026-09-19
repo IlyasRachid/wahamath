@@ -15,7 +15,6 @@ import {
   LogOut,
   Menu,
   MessageSquare,
-  PlusCircle,
   Settings,
   Shield,
   Users,
@@ -363,7 +362,6 @@ export const teacherNav: NavGroup[] = [
     items: [
       { label: 'Tableau de bord', href: '/prof', icon: LayoutDashboard },
       { label: 'Exercices', href: '/prof/exercices', icon: FileText },
-      { label: 'Ajouter un exercice', href: '/prof/ajouter', icon: PlusCircle },
       { label: 'Classes', href: '/prof/classes', icon: BookOpen },
       { label: 'Élèves', href: '/prof/eleves', icon: Users },
       { label: 'Inscriptions', href: '/prof/inscriptions', icon: Users },

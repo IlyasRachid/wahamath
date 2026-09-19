@@ -27,6 +27,8 @@ const publicationOptions: FilterOption[] = [
   { label: 'Brouillons', value: 'brouillon' }, { label: 'Dépubliés', value: 'depublie' },
 ];
 
+type ClassItem = { code: string; chapters: { id: string; title: string }[] };
+
 function toExercise(item: any, index: number): Exercise {
   return {
     id: item.id, number: index + 1, title: item.title, classCode: item.classes?.code ?? '', chapter: item.chapters?.title ?? 'Sans chapitre', difficulty: item.difficulty,
@@ -39,16 +41,18 @@ export default function TeacherExercisesPage() {
   const requestedClass = searchParams.get('classe') ?? 'all';
   const requestedSearch = searchParams.get('q') ?? '';
   const cachedExercises = peekApiCache<{ items: any[] }>('/api/exercises');
-  const cachedClasses = peekApiCache<{ items: { code: string }[] }>('/api/classes');
+  const cachedClasses = peekApiCache<{ items: ClassItem[] }>('/api/classes');
   const [exercises, setExercises] = useState<Exercise[]>(() => cachedExercises ? cachedExercises.items.map(toExercise) : []);
   const [loading, setLoading] = useState(!cachedExercises || !cachedClasses);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState(requestedSearch);
   const [classFilter, setClassFilter] = useState(requestedClass);
+  const [chapterFilter, setChapterFilter] = useState('all');
   const [difficultyFilter, setDifficultyFilter] = useState('all');
   const [publicationFilter, setPublicationFilter] = useState('all');
   const [busyId, setBusyId] = useState<string | null>(null);
   const [exerciseToDelete, setExerciseToDelete] = useState<Exercise | null>(null);
+  const [classes, setClasses] = useState<ClassItem[]>(() => cachedClasses?.items ?? []);
   const [classOptions, setClassOptions] = useState<FilterOption[]>(() => cachedClasses ? [{ label: 'Toutes les classes', value: 'all' }, ...cachedClasses.items.map((item) => ({ label: item.code, value: item.code }))] : [{ label: 'Toutes les classes', value: 'all' }]);
   const { toast } = useToast();
 
@@ -56,9 +60,10 @@ export default function TeacherExercisesPage() {
     const loadExercises = async () => {
       if (cachedExercises && cachedClasses) return;
       try {
-        const [payload, classesPayload] = await Promise.all([cachedApiGet<{ items: any[] }>('/api/exercises', 5 * 60_000, ['exercises']), cachedApiGet<{ items: { code: string }[] }>('/api/classes', 5 * 60_000, ['classes'])]);
+        const [payload, classesPayload] = await Promise.all([cachedApiGet<{ items: any[] }>('/api/exercises', 5 * 60_000, ['exercises']), cachedApiGet<{ items: ClassItem[] }>('/api/classes', 5 * 60_000, ['classes'])]);
         setExercises(payload.items.map(toExercise));
-        setClassOptions([{ label: 'Toutes les classes', value: 'all' }, ...classesPayload.items.map((item: { code: string }) => ({ label: item.code, value: item.code }))]);
+        setClasses(classesPayload.items);
+        setClassOptions([{ label: 'Toutes les classes', value: 'all' }, ...classesPayload.items.map((item) => ({ label: item.code, value: item.code }))]);
       } catch (requestError) {
         setError(requestError instanceof Error ? requestError.message : 'Impossible de charger les exercices.');
       } finally { setLoading(false); }
@@ -68,6 +73,7 @@ export default function TeacherExercisesPage() {
 
   useEffect(() => {
     setClassFilter(requestedClass);
+    setChapterFilter('all');
   }, [requestedClass]);
 
   useEffect(() => {
@@ -111,13 +117,19 @@ export default function TeacherExercisesPage() {
     } finally { setBusyId(null); }
   };
 
+  const chapterOptions = useMemo<FilterOption[]>(() => {
+    const selectedClass = classes.find((item) => item.code === classFilter);
+    return [{ label: 'Tous les chapitres', value: 'all' }, ...(selectedClass?.chapters.map((chapter) => ({ label: chapter.title, value: chapter.title })) ?? [])];
+  }, [classes, classFilter]);
+
   const filtered = useMemo(() => exercises.filter((exercise) => {
     const query = search.toLowerCase();
     return (!query || exercise.title.toLowerCase().includes(query) || exercise.chapter.toLowerCase().includes(query) || exercise.tags.some((tag) => tag.toLowerCase().includes(query)))
       && (classFilter === 'all' || exercise.classCode === classFilter)
+      && (chapterFilter === 'all' || exercise.chapter === chapterFilter)
       && (difficultyFilter === 'all' || exercise.difficulty === difficultyFilter)
       && (publicationFilter === 'all' || exercise.publicationStatus === publicationFilter);
-  }), [exercises, search, classFilter, difficultyFilter, publicationFilter]);
+  }), [exercises, search, classFilter, chapterFilter, difficultyFilter, publicationFilter]);
   return <div className="space-y-6">
     <PageHeader title="Exercices" subtitle="Gérez les brouillons et les exercices visibles par vos élèves." />
     <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -125,7 +137,8 @@ export default function TeacherExercisesPage() {
       <Button asChild className="sm:shrink-0"><Link href="/prof/ajouter"><Plus className="h-4 w-4" />Ajouter un exercice</Link></Button>
     </div>
     <FilterBar filters={[
-      { label: 'Classe', value: classFilter, options: classOptions, onChange: setClassFilter },
+      { label: 'Classe', value: classFilter, options: classOptions, onChange: (value) => { setClassFilter(value); setChapterFilter('all'); } },
+      { label: 'Chapitres', value: chapterFilter, options: chapterOptions, onChange: setChapterFilter, disabled: classFilter === 'all' },
       { label: 'Difficulté', value: difficultyFilter, options: difficultyOptions, onChange: setDifficultyFilter },
       { label: 'Publication', value: publicationFilter, options: publicationOptions, onChange: setPublicationFilter },
     ]} />

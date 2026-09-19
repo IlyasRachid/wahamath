@@ -4,7 +4,7 @@ import { apiUrl } from '@/lib/api-url';
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { Eye, FileX, Loader2, Send, Trash2, Undo2 } from 'lucide-react';
+import { Eye, FileX, Loader2, Plus, Send, Trash2, Undo2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 import { cachedApiGet, invalidateApiCache, peekApiCache } from '@/lib/api-cache';
 import type { Exercise, PublicationStatus } from '@/lib/types';
@@ -120,7 +120,10 @@ export default function TeacherExercisesPage() {
   }), [exercises, search, classFilter, difficultyFilter, publicationFilter]);
   return <div className="space-y-6">
     <PageHeader title="Exercices" subtitle="Gérez les brouillons et les exercices visibles par vos élèves." />
-    <SearchInput value={search} onChange={setSearch} placeholder="Rechercher un exercice..." className="max-w-md" />
+    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+      <SearchInput value={search} onChange={setSearch} placeholder="Rechercher un exercice..." className="max-w-md" />
+      <Button asChild className="sm:shrink-0"><Link href="/prof/ajouter"><Plus className="h-4 w-4" />Ajouter un exercice</Link></Button>
+    </div>
     <FilterBar filters={[
       { label: 'Classe', value: classFilter, options: classOptions, onChange: setClassFilter },
       { label: 'Difficulté', value: difficultyFilter, options: difficultyOptions, onChange: setDifficultyFilter },

@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
-import { Eye, MessageCircle } from 'lucide-react';
+import { Eye, FileText, MessageCircle } from 'lucide-react';
 import type { Exercise } from '@/lib/types';
 import { DifficultyBadge, StatusBadge } from './badges';
 import { Button } from '@/components/ui/button';
@@ -33,7 +33,7 @@ export function ExerciseCard({ exercise, href, className }: Props) {
           <span className="ml-auto rounded-md bg-secondary px-1.5 py-0.5 text-[10px] font-bold text-primary">N°{exercise.number}</span>
         </div>
 
-        <Link href={href} className="line-clamp-2 text-sm font-semibold leading-snug text-foreground transition-colors hover:text-primary">{exercise.title}</Link>
+        <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-foreground">{exercise.title}</h3>
 
         <div className="mt-3 flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5"><DifficultyBadge difficulty={exercise.difficulty} /><StatusBadge status={exercise.status} /></div>
@@ -48,7 +48,8 @@ export function ExerciseCard({ exercise, href, className }: Props) {
             </span>
           </div>
         </div>
-        <Button size="sm" variant="outline" className="mt-3 w-full" disabled={!exercise.imageUrl} onClick={() => setPreviewOpen(true)}><Eye className="h-4 w-4" />Aperçu : Exercice n°{exercise.number}</Button>
+        <Button asChild size="sm" className="mt-3 w-full"><Link href={href}><FileText className="h-4 w-4" />Ouvrir l'exercice</Link></Button>
+        <Button size="sm" variant="outline" className="mt-2 w-full" disabled={!exercise.imageUrl} onClick={() => setPreviewOpen(true)}><Eye className="h-4 w-4" />Aperçu : Exercice n°{exercise.number}</Button>
       </div>
       <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
         <DialogContent className="max-w-4xl">

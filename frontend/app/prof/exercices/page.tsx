@@ -16,6 +16,7 @@ import { EmptyState } from '@/components/shared/empty-state';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 
 const difficultyOptions: FilterOption[] = [
@@ -52,6 +53,7 @@ export default function TeacherExercisesPage() {
   const [publicationFilter, setPublicationFilter] = useState('all');
   const [busyId, setBusyId] = useState<string | null>(null);
   const [exerciseToDelete, setExerciseToDelete] = useState<Exercise | null>(null);
+  const [previewExercise, setPreviewExercise] = useState<Exercise | null>(null);
   const [classes, setClasses] = useState<ClassItem[]>(() => cachedClasses?.items ?? []);
   const [classOptions, setClassOptions] = useState<FilterOption[]>(() => cachedClasses ? [{ label: 'Toutes les classes', value: 'all' }, ...cachedClasses.items.map((item) => ({ label: item.code, value: item.code }))] : [{ label: 'Toutes les classes', value: 'all' }]);
   const { toast } = useToast();
@@ -149,10 +151,10 @@ export default function TeacherExercisesPage() {
         const busy = busyId === exercise.id;
         const isPublished = exercise.publicationStatus === 'publie';
         return <Card key={exercise.id} className="overflow-hidden">
-          {exercise.imageUrl && <img src={exercise.imageUrl} alt={`Aperçu : ${exercise.title}`} className="aspect-[4/3] w-full object-cover" />}
           <CardContent className="space-y-3 p-4">
             <div><p className="text-xs font-medium text-primary">{exercise.classCode} · {exercise.chapter}</p><h2 className="mt-1 text-sm font-semibold text-foreground">{exercise.title}</h2></div>
             <div className="flex items-center justify-between"><DifficultyBadge difficulty={exercise.difficulty} /><PublicationBadge status={exercise.publicationStatus} /></div>
+            <Button size="sm" variant="outline" className="w-full" disabled={!exercise.imageUrl} onClick={() => setPreviewExercise(exercise)}><Eye className="h-4 w-4" />Aperçu : Exercice n°{exercise.number}</Button>
             <div className="grid grid-cols-2 gap-2">
               <Button asChild variant="outline" size="sm"><Link href={`/prof/exercices/${exercise.id}`}><Eye className="h-4 w-4" />Voir</Link></Button>
               <Button size="sm" variant={isPublished ? 'secondary' : 'default'} disabled={busy} onClick={() => changePublication(exercise, isPublished ? 'depublie' : 'publie')}>
@@ -163,6 +165,12 @@ export default function TeacherExercisesPage() {
           </CardContent>
         </Card>;
       })}</div>}
+    <Dialog open={Boolean(previewExercise)} onOpenChange={(open) => !open && setPreviewExercise(null)}>
+      <DialogContent className="max-w-4xl">
+        <DialogHeader><DialogTitle>Aperçu : Exercice n°{previewExercise?.number}</DialogTitle></DialogHeader>
+        {previewExercise?.imageUrl && <img src={previewExercise.imageUrl} alt={`Aperçu : ${previewExercise.title}`} className="max-h-[70vh] w-full rounded-md object-contain" />}
+      </DialogContent>
+    </Dialog>
     <AlertDialog open={Boolean(exerciseToDelete)} onOpenChange={(open) => !open && setExerciseToDelete(null)}>
       <AlertDialogContent>
         <AlertDialogHeader><AlertDialogTitle>Supprimer cet exercice ?</AlertDialogTitle><AlertDialogDescription>Cette action retire définitivement l’exercice, son image et les commentaires associés. Elle ne peut pas être annulée.</AlertDialogDescription></AlertDialogHeader>

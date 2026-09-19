@@ -140,7 +140,7 @@ export default function ExercisesPage() {
           action={<Button variant="outline" onClick={() => { setSearch(''); setChapterFilter('all'); setDifficultyFilter('all'); resetPage(); }}>Réinitialiser les filtres</Button>}
         />
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {paged.map((ex) => (
             <ExerciseCard key={ex.id} exercise={ex} href={`/eleve/exercices/${ex.id}`} />
           ))}

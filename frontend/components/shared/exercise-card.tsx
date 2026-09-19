@@ -1,11 +1,13 @@
 'use client';
 
 import Link from 'next/link';
+import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { Eye, MessageCircle } from 'lucide-react';
 import type { Exercise } from '@/lib/types';
-import { ExerciseThumb } from '@/components/math/exercise-thumb';
 import { DifficultyBadge, StatusBadge } from './badges';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 type Props = {
   exercise: Exercise;
@@ -14,41 +16,27 @@ type Props = {
 };
 
 export function ExerciseCard({ exercise, href, className }: Props) {
+  const [previewOpen, setPreviewOpen] = useState(false);
+
   return (
-    <Link
-      href={href}
+    <div
       className={cn(
         'group flex flex-col overflow-hidden rounded-xl border border-border bg-card shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md',
         className,
       )}
-      >
-      <div className="relative aspect-[4/3] overflow-hidden border-b border-border bg-secondary">
-        {exercise.imageUrl ? (
-          <img src={exercise.imageUrl} alt={`Aperçu : ${exercise.title}`} className="h-full w-full object-cover" />
-        ) : (
-          <ExerciseThumb variant={exercise.artVariant} className="h-full w-full rounded-none ring-0" />
-        )}
-        <div className="absolute left-2 top-2">
-          <StatusBadge status={exercise.status} className="bg-card/90 backdrop-blur-sm" />
-        </div>
-        <div className="absolute right-2 top-2 rounded-md bg-card/90 px-1.5 py-0.5 text-[10px] font-bold text-primary backdrop-blur-sm">
-          N°{exercise.number}
-        </div>
-      </div>
-
-      <div className="flex flex-1 flex-col p-4">
+    >
+      <div className="flex flex-1 flex-col p-3">
         <div className="mb-2 flex items-center gap-2 text-xs text-muted-foreground">
           <span className="font-medium text-primary">{exercise.classCode}</span>
           <span className="text-muted-foreground/50">·</span>
           <span className="truncate">{exercise.chapter}</span>
+          <span className="ml-auto rounded-md bg-secondary px-1.5 py-0.5 text-[10px] font-bold text-primary">N°{exercise.number}</span>
         </div>
 
-        <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-foreground transition-colors group-hover:text-primary">
-          {exercise.title}
-        </h3>
+        <Link href={href} className="line-clamp-2 text-sm font-semibold leading-snug text-foreground transition-colors hover:text-primary">{exercise.title}</Link>
 
-        <div className="mt-3 flex items-center justify-between">
-          <DifficultyBadge difficulty={exercise.difficulty} />
+        <div className="mt-3 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5"><DifficultyBadge difficulty={exercise.difficulty} /><StatusBadge status={exercise.status} /></div>
           <div className="flex items-center gap-3 text-xs text-muted-foreground">
             <span className="inline-flex items-center gap-1">
               <Eye className="h-3.5 w-3.5" />
@@ -60,7 +48,14 @@ export function ExerciseCard({ exercise, href, className }: Props) {
             </span>
           </div>
         </div>
+        <Button size="sm" variant="outline" className="mt-3 w-full" disabled={!exercise.imageUrl} onClick={() => setPreviewOpen(true)}><Eye className="h-4 w-4" />Aperçu : Exercice n°{exercise.number}</Button>
       </div>
-    </Link>
+      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader><DialogTitle>Aperçu : Exercice n°{exercise.number}</DialogTitle></DialogHeader>
+          {exercise.imageUrl && <img src={exercise.imageUrl} alt={`Aperçu : ${exercise.title}`} className="max-h-[70vh] w-full rounded-md object-contain" />}
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }

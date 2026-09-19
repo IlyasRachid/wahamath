@@ -147,11 +147,11 @@ export default function TeacherExercisesPage() {
     {loading ? <Card><CardContent className="py-12 text-center text-sm text-muted-foreground">Chargement des exercices…</CardContent></Card>
       : error ? <Card className="border-destructive/20"><CardContent className="py-12 text-center text-sm text-destructive">{error}</CardContent></Card>
       : filtered.length === 0 ? <EmptyState icon={FileX} title="Aucun exercice trouvé" description="Aucun exercice ne correspond à vos critères." />
-      : <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{filtered.map((exercise) => {
+      : <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">{filtered.map((exercise) => {
         const busy = busyId === exercise.id;
         const isPublished = exercise.publicationStatus === 'publie';
         return <Card key={exercise.id} className="overflow-hidden">
-          <CardContent className="space-y-3 p-4">
+          <CardContent className="space-y-2.5 p-3">
             <div><p className="text-xs font-medium text-primary">{exercise.classCode} · {exercise.chapter}</p><h2 className="mt-1 text-sm font-semibold text-foreground">{exercise.title}</h2></div>
             <div className="flex items-center justify-between"><DifficultyBadge difficulty={exercise.difficulty} /><PublicationBadge status={exercise.publicationStatus} /></div>
             <Button size="sm" variant="outline" className="w-full" disabled={!exercise.imageUrl} onClick={() => setPreviewExercise(exercise)}><Eye className="h-4 w-4" />Aperçu : Exercice n°{exercise.number}</Button>

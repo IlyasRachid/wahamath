@@ -154,9 +154,9 @@ export default function TeacherExercisesPage() {
           <CardContent className="space-y-2.5 p-3">
             <div><p className="text-xs font-medium text-primary">{exercise.classCode} · {exercise.chapter}</p><h2 className="mt-1 text-sm font-semibold text-foreground">{exercise.title}</h2></div>
             <div className="flex items-center justify-between"><DifficultyBadge difficulty={exercise.difficulty} /><PublicationBadge status={exercise.publicationStatus} /></div>
-            <Button size="sm" variant="outline" className="w-full" disabled={!exercise.imageUrl} onClick={() => setPreviewExercise(exercise)}><Eye className="h-4 w-4" />Apercue de l'exerice</Button>
+            <Button size="sm" variant="outline" className="w-full" disabled={!exercise.imageUrl} onClick={() => setPreviewExercise(exercise)}><Eye className="h-4 w-4" />Aperçu de l'exercice</Button>
             <div className="grid grid-cols-2 gap-2">
-              <Button asChild variant="outline" size="sm"><Link href={`/prof/exercices/${exercise.id}`}><Eye className="h-4 w-4" />Apercue de l'exerice</Link></Button>
+              <Button asChild variant="outline" size="sm"><Link href={`/prof/exercices/${exercise.id}`}><Eye className="h-4 w-4" />Voir</Link></Button>
               <Button size="sm" variant={isPublished ? 'secondary' : 'default'} disabled={busy} onClick={() => changePublication(exercise, isPublished ? 'depublie' : 'publie')}>
                 {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : isPublished ? <Undo2 className="h-4 w-4" /> : <Send className="h-4 w-4" />}{isPublished ? 'Dépublier' : 'Publier'}
               </Button>

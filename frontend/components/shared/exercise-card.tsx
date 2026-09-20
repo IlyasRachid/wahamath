@@ -49,7 +49,7 @@ export function ExerciseCard({ exercise, href, className }: Props) {
           </div>
         </div>
         <Button asChild size="sm" className="mt-3 w-full"><Link href={href}><FileText className="h-4 w-4" />Ouvrir l'exercice</Link></Button>
-  <Button size="sm" variant="outline" className="mt-2 w-full" disabled={!exercise.imageUrl} onClick={() => setPreviewOpen(true)}><Eye className="h-4 w-4" />Apercue de l'exerice</Button>
+      <Button size="sm" variant="outline" className="mt-2 w-full" disabled={!exercise.imageUrl} onClick={() => setPreviewOpen(true)}><Eye className="h-4 w-4" />Aperçu de l'exercice</Button>
       </div>
       <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
         <DialogContent className="max-w-4xl">

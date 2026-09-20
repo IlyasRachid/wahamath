@@ -4,7 +4,7 @@ import { apiUrl } from '@/lib/api-url';
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { Eye, FileX, Loader2, Send, Trash2, Undo2 } from 'lucide-react';
+import { Eye, FileX, Loader2, Plus, Send, Trash2, Undo2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 import { cachedApiGet, invalidateApiCache, peekApiCache } from '@/lib/api-cache';
 import type { Exercise, PublicationStatus } from '@/lib/types';
@@ -16,6 +16,7 @@ import { EmptyState } from '@/components/shared/empty-state';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 
 const difficultyOptions: FilterOption[] = [
@@ -26,6 +27,8 @@ const publicationOptions: FilterOption[] = [
   { label: 'Tous les statuts', value: 'all' }, { label: 'Publiés', value: 'publie' },
   { label: 'Brouillons', value: 'brouillon' }, { label: 'Dépubliés', value: 'depublie' },
 ];
+
+type ClassItem = { code: string; chapters: { id: string; title: string }[] };
 
 function toExercise(item: any, index: number): Exercise {
   return {
@@ -39,16 +42,19 @@ export default function TeacherExercisesPage() {
   const requestedClass = searchParams.get('classe') ?? 'all';
   const requestedSearch = searchParams.get('q') ?? '';
   const cachedExercises = peekApiCache<{ items: any[] }>('/api/exercises');
-  const cachedClasses = peekApiCache<{ items: { code: string }[] }>('/api/classes');
+  const cachedClasses = peekApiCache<{ items: ClassItem[] }>('/api/classes');
   const [exercises, setExercises] = useState<Exercise[]>(() => cachedExercises ? cachedExercises.items.map(toExercise) : []);
   const [loading, setLoading] = useState(!cachedExercises || !cachedClasses);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState(requestedSearch);
   const [classFilter, setClassFilter] = useState(requestedClass);
+  const [chapterFilter, setChapterFilter] = useState('all');
   const [difficultyFilter, setDifficultyFilter] = useState('all');
   const [publicationFilter, setPublicationFilter] = useState('all');
   const [busyId, setBusyId] = useState<string | null>(null);
   const [exerciseToDelete, setExerciseToDelete] = useState<Exercise | null>(null);
+  const [previewExercise, setPreviewExercise] = useState<Exercise | null>(null);
+  const [classes, setClasses] = useState<ClassItem[]>(() => cachedClasses?.items ?? []);
   const [classOptions, setClassOptions] = useState<FilterOption[]>(() => cachedClasses ? [{ label: 'Toutes les classes', value: 'all' }, ...cachedClasses.items.map((item) => ({ label: item.code, value: item.code }))] : [{ label: 'Toutes les classes', value: 'all' }]);
   const { toast } = useToast();
 
@@ -56,9 +62,10 @@ export default function TeacherExercisesPage() {
     const loadExercises = async () => {
       if (cachedExercises && cachedClasses) return;
       try {
-        const [payload, classesPayload] = await Promise.all([cachedApiGet<{ items: any[] }>('/api/exercises', 5 * 60_000, ['exercises']), cachedApiGet<{ items: { code: string }[] }>('/api/classes', 5 * 60_000, ['classes'])]);
+        const [payload, classesPayload] = await Promise.all([cachedApiGet<{ items: any[] }>('/api/exercises', 5 * 60_000, ['exercises']), cachedApiGet<{ items: ClassItem[] }>('/api/classes', 5 * 60_000, ['classes'])]);
         setExercises(payload.items.map(toExercise));
-        setClassOptions([{ label: 'Toutes les classes', value: 'all' }, ...classesPayload.items.map((item: { code: string }) => ({ label: item.code, value: item.code }))]);
+        setClasses(classesPayload.items);
+        setClassOptions([{ label: 'Toutes les classes', value: 'all' }, ...classesPayload.items.map((item) => ({ label: item.code, value: item.code }))]);
       } catch (requestError) {
         setError(requestError instanceof Error ? requestError.message : 'Impossible de charger les exercices.');
       } finally { setLoading(false); }
@@ -68,6 +75,7 @@ export default function TeacherExercisesPage() {
 
   useEffect(() => {
     setClassFilter(requestedClass);
+    setChapterFilter('all');
   }, [requestedClass]);
 
   useEffect(() => {
@@ -111,32 +119,42 @@ export default function TeacherExercisesPage() {
     } finally { setBusyId(null); }
   };
 
+  const chapterOptions = useMemo<FilterOption[]>(() => {
+    const selectedClass = classes.find((item) => item.code === classFilter);
+    return [{ label: 'Tous les chapitres', value: 'all' }, ...(selectedClass?.chapters.map((chapter) => ({ label: chapter.title, value: chapter.title })) ?? [])];
+  }, [classes, classFilter]);
+
   const filtered = useMemo(() => exercises.filter((exercise) => {
     const query = search.toLowerCase();
     return (!query || exercise.title.toLowerCase().includes(query) || exercise.chapter.toLowerCase().includes(query) || exercise.tags.some((tag) => tag.toLowerCase().includes(query)))
       && (classFilter === 'all' || exercise.classCode === classFilter)
+      && (chapterFilter === 'all' || exercise.chapter === chapterFilter)
       && (difficultyFilter === 'all' || exercise.difficulty === difficultyFilter)
       && (publicationFilter === 'all' || exercise.publicationStatus === publicationFilter);
-  }), [exercises, search, classFilter, difficultyFilter, publicationFilter]);
+  }), [exercises, search, classFilter, chapterFilter, difficultyFilter, publicationFilter]);
   return <div className="space-y-6">
     <PageHeader title="Exercices" subtitle="Gérez les brouillons et les exercices visibles par vos élèves." />
-    <SearchInput value={search} onChange={setSearch} placeholder="Rechercher un exercice..." className="max-w-md" />
+    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+      <SearchInput value={search} onChange={setSearch} placeholder="Rechercher un exercice..." className="max-w-md" />
+      <Button asChild className="sm:shrink-0"><Link href="/prof/ajouter"><Plus className="h-4 w-4" />Ajouter un exercice</Link></Button>
+    </div>
     <FilterBar filters={[
-      { label: 'Classe', value: classFilter, options: classOptions, onChange: setClassFilter },
+      { label: 'Classe', value: classFilter, options: classOptions, onChange: (value) => { setClassFilter(value); setChapterFilter('all'); } },
+      { label: 'Chapitres', value: chapterFilter, options: chapterOptions, onChange: setChapterFilter, disabled: classFilter === 'all' },
       { label: 'Difficulté', value: difficultyFilter, options: difficultyOptions, onChange: setDifficultyFilter },
       { label: 'Publication', value: publicationFilter, options: publicationOptions, onChange: setPublicationFilter },
     ]} />
     {loading ? <Card><CardContent className="py-12 text-center text-sm text-muted-foreground">Chargement des exercices…</CardContent></Card>
       : error ? <Card className="border-destructive/20"><CardContent className="py-12 text-center text-sm text-destructive">{error}</CardContent></Card>
       : filtered.length === 0 ? <EmptyState icon={FileX} title="Aucun exercice trouvé" description="Aucun exercice ne correspond à vos critères." />
-      : <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{filtered.map((exercise) => {
+      : <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">{filtered.map((exercise) => {
         const busy = busyId === exercise.id;
         const isPublished = exercise.publicationStatus === 'publie';
         return <Card key={exercise.id} className="overflow-hidden">
-          {exercise.imageUrl && <img src={exercise.imageUrl} alt={`Aperçu : ${exercise.title}`} className="aspect-[4/3] w-full object-cover" />}
-          <CardContent className="space-y-3 p-4">
+          <CardContent className="space-y-2.5 p-3">
             <div><p className="text-xs font-medium text-primary">{exercise.classCode} · {exercise.chapter}</p><h2 className="mt-1 text-sm font-semibold text-foreground">{exercise.title}</h2></div>
             <div className="flex items-center justify-between"><DifficultyBadge difficulty={exercise.difficulty} /><PublicationBadge status={exercise.publicationStatus} /></div>
+            <Button size="sm" variant="outline" className="w-full" disabled={!exercise.imageUrl} onClick={() => setPreviewExercise(exercise)}><Eye className="h-4 w-4" />Aperçu : Exercice n°{exercise.number}</Button>
             <div className="grid grid-cols-2 gap-2">
               <Button asChild variant="outline" size="sm"><Link href={`/prof/exercices/${exercise.id}`}><Eye className="h-4 w-4" />Apercue de l'exerice</Link></Button>
               <Button size="sm" variant={isPublished ? 'secondary' : 'default'} disabled={busy} onClick={() => changePublication(exercise, isPublished ? 'depublie' : 'publie')}>
@@ -147,6 +165,12 @@ export default function TeacherExercisesPage() {
           </CardContent>
         </Card>;
       })}</div>}
+    <Dialog open={Boolean(previewExercise)} onOpenChange={(open) => !open && setPreviewExercise(null)}>
+      <DialogContent className="max-w-4xl">
+        <DialogHeader><DialogTitle>Aperçu : Exercice n°{previewExercise?.number}</DialogTitle></DialogHeader>
+        {previewExercise?.imageUrl && <img src={previewExercise.imageUrl} alt={`Aperçu : ${previewExercise.title}`} className="max-h-[70vh] w-full rounded-md object-contain" />}
+      </DialogContent>
+    </Dialog>
     <AlertDialog open={Boolean(exerciseToDelete)} onOpenChange={(open) => !open && setExerciseToDelete(null)}>
       <AlertDialogContent>
         <AlertDialogHeader><AlertDialogTitle>Supprimer cet exercice ?</AlertDialogTitle><AlertDialogDescription>Cette action retire définitivement l’exercice, son image et les commentaires associés. Elle ne peut pas être annulée.</AlertDialogDescription></AlertDialogHeader>

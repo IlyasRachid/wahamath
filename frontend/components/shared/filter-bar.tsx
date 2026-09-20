@@ -16,11 +16,12 @@ type FilterProps = {
   value: string;
   options: FilterOption[];
   onChange: (v: string) => void;
+  disabled?: boolean;
 };
 
-function Filter({ label, value, options, onChange }: FilterProps) {
+function Filter({ label, value, options, onChange, disabled = false }: FilterProps) {
   return (
-    <Select value={value} onValueChange={onChange}>
+    <Select value={value} onValueChange={onChange} disabled={disabled}>
       <SelectTrigger className="h-9 w-auto min-w-[130px] bg-card text-sm">
         <SelectValue placeholder={label} />
       </SelectTrigger>

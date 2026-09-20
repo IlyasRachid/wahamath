@@ -31,7 +31,8 @@ export default function AddExercisePage() {
   const [description, setDescription] = useState('');
   const [classCode, setClassCode] = useState('');
   const [chapter, setChapter] = useState('');
-  const [difficulty, setDifficulty] = useState('');
+  // New exercises default to medium difficulty; choosing another value remains optional.
+  const [difficulty, setDifficulty] = useState('moyen');
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
   const [publish, setPublish] = useState(false);
@@ -61,7 +62,6 @@ export default function AddExercisePage() {
     if (!title.trim()) e.title = 'Le titre est obligatoire.';
     if (!classCode) e.classCode = 'Veuillez sélectionner une classe.';
     if (!chapter) e.chapter = 'Veuillez sélectionner un chapitre.';
-    if (!difficulty) e.difficulty = 'Veuillez sélectionner une difficulté.';
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -177,7 +177,7 @@ export default function AddExercisePage() {
               </div>
 
               <div>
-                <Label>Difficulté <span className="text-destructive">*</span></Label>
+                <Label>Difficulté (optionnel)</Label>
                 <Select value={difficulty} onValueChange={setDifficulty}>
                   <SelectTrigger className="mt-1.5"><SelectValue placeholder="Sélectionner" /></SelectTrigger>
                   <SelectContent>
@@ -186,7 +186,6 @@ export default function AddExercisePage() {
                     <SelectItem value="difficile">Difficile</SelectItem>
                   </SelectContent>
                 </Select>
-                {errors.difficulty && <p className="mt-1 text-xs text-destructive">{errors.difficulty}</p>}
               </div>
 
               <div>

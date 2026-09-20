@@ -161,7 +161,7 @@ export default function TeacherExercisesPage() {
                 {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : isPublished ? <Undo2 className="h-4 w-4" /> : <Send className="h-4 w-4" />}{isPublished ? 'Dépublier' : 'Publier'}
               </Button>
             </div>
-            <Button size="sm" variant="ghost" className="w-full text-destructive hover:text-destructive" disabled={busy} onClick={() => setExerciseToDelete(exercise)}><Trash2 className="h-4 w-4" />Supprimer</Button>
+            <Button size="sm" variant="ghost" className="w-full text-destructive hover:text-destructive" disabled={busy} onClick={() => setExerciseToDelete(exercise)}><Trash2 className="h-4 w-4" />Supprimer l'exercice</Button>
           </CardContent>
         </Card>;
       })}</div>}

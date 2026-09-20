@@ -60,6 +60,10 @@ export function ExerciseCard({ exercise, href, className }: Props) {
             </span>
           </div>
         </div>
+        <span className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-primary">
+          <Eye className="h-4 w-4" />
+          Apercue de l'exerice
+        </span>
       </div>
     </Link>
   );

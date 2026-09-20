@@ -2,7 +2,9 @@
 
 import { cn } from '@/lib/utils';
 import { useCallback, useEffect, useState } from 'react';
-import { UploadCloud, X, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { UploadCloud, X, AlertCircle, CheckCircle2, Eye } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 type Props = {
   className?: string;
@@ -15,6 +17,7 @@ export function UploadDropzone({ className, onUploaded, onFileChange }: Props) {
   const [hasFile, setHasFile] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleFiles = useCallback(
@@ -103,11 +106,23 @@ export function UploadDropzone({ className, onUploaded, onFileChange }: Props) {
             </button>
           </div>
           <div className="p-4">
-            {previewUrl && <img src={previewUrl} alt="Aperçu de l'exercice téléversé" className="mx-auto max-h-80 w-full max-w-xs rounded-md object-contain" />}
+            <Button type="button" variant="outline" className="mx-auto flex" disabled={!previewUrl} onClick={() => setPreviewOpen(true)}>
+              <Eye className="h-4 w-4" />
+              Voir l’aperçu
+            </Button>
             <p className="mt-2 text-center text-xs text-muted-foreground">{file?.name} · {file ? `${(file.size / (1024 * 1024)).toFixed(1)} Mo` : ''}</p>
           </div>
         </div>
       )}
+
+      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Aperçu de l’exercice téléversé</DialogTitle>
+          </DialogHeader>
+          {previewUrl && <img src={previewUrl} alt="Aperçu de l’exercice téléversé" className="max-h-[70vh] w-full rounded-md object-contain" />}
+        </DialogContent>
+      </Dialog>
 
       {error && (
         <div className="mt-3 flex items-center gap-2 rounded-lg border border-destructive/20 bg-destructive/5 px-3 py-2 text-sm text-destructive">

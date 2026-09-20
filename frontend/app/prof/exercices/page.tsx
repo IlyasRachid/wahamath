@@ -156,7 +156,7 @@ export default function TeacherExercisesPage() {
             <div className="flex items-center justify-between"><DifficultyBadge difficulty={exercise.difficulty} /><PublicationBadge status={exercise.publicationStatus} /></div>
             <Button size="sm" variant="outline" className="w-full" disabled={!exercise.imageUrl} onClick={() => setPreviewExercise(exercise)}><Eye className="h-4 w-4" />Aperçu de l'exercice</Button>
             <div className="grid grid-cols-2 gap-2">
-              <Button asChild variant="outline" size="sm"><Link href={`/prof/exercices/${exercise.id}`}><Eye className="h-4 w-4" />Voir</Link></Button>
+              <Button asChild variant="outline" size="sm"><Link href={`/prof/exercices/${exercise.id}`}><Eye className="h-4 w-4" />Ouvrir l'exercice</Link></Button>
               <Button size="sm" variant={isPublished ? 'secondary' : 'default'} disabled={busy} onClick={() => changePublication(exercise, isPublished ? 'depublie' : 'publie')}>
                 {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : isPublished ? <Undo2 className="h-4 w-4" /> : <Send className="h-4 w-4" />}{isPublished ? 'Dépublier' : 'Publier'}
               </Button>

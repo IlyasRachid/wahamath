@@ -992,16 +992,22 @@ async def list_notifications(
             raise HTTPException(status_code=502, detail='Impossible de charger les notifications.')
 
         notifications = response.json()
-        exercise_ids = [
+        # A notification that points to an exercise is only meaningful while
+        # the student can still access that exercise.  Do this at read time as
+        # well as when an exercise is unpublished, so notifications remain
+        # correct if the status was changed outside this API or stale rows
+        # already exist in the database.
+        exercise_notification_ids = {
             notification['href'].rsplit('/', 1)[-1]
             for notification in notifications
             if (notification.get('href') or '').startswith('/eleve/exercices/')
-        ]
-        if exercise_ids:
+        }
+        if exercise_notification_ids:
             exercises_response = await client.get(
                 '/rest/v1/exercises',
                 params={
-                    'id': f"in.({','.join(exercise_ids)})",
+                    'id': f"in.({','.join(exercise_notification_ids)})",
+                    'publication_status': 'eq.publie',
                     'select': 'id,title,classes(code),chapters(title)',
                 },
                 headers=headers,
@@ -1009,6 +1015,12 @@ async def list_notifications(
             if exercises_response.is_error:
                 raise HTTPException(status_code=502, detail='Impossible de charger les informations des exercices.')
             exercises_by_id = {exercise['id']: exercise for exercise in exercises_response.json()}
+            notifications = [
+                notification
+                for notification in notifications
+                if not (notification.get('href') or '').startswith('/eleve/exercices/')
+                or notification['href'].rsplit('/', 1)[-1] in exercises_by_id
+            ]
             for notification in notifications:
                 href = notification.get('href') or ''
                 if href.startswith('/eleve/exercices/'):

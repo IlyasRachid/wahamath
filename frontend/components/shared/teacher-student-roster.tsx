@@ -44,8 +44,8 @@ export function TeacherStudentRoster({ classes, onStudentDeleted, onStudentChang
       const exerciseResponse = await fetch(`${apiUrl}/api/exercises`, { headers: { Authorization: `Bearer ${session.access_token}` } });
       if (exerciseResponse.ok) {
         const studentClassCodes = new Set(payload.classes.map((item: { code: string }) => item.code));
-        const exerciseItems = (await exerciseResponse.json()).items as { id: string; title: string; classes?: { code?: string } | null; chapters?: { title?: string } | null }[];
-        setExercises(exerciseItems.filter((exercise) => studentClassCodes.has(exercise.classes?.code ?? '')).map(({ id, title, chapters }) => ({ id, title, chapter: chapters?.title ?? 'Sans chapitre' })));
+        const exerciseItems = (await exerciseResponse.json()).items as { id: string; title: string; publication_status: string; classes?: { code?: string } | null; chapters?: { title?: string } | null }[];
+        setExercises(exerciseItems.filter((exercise) => exercise.publication_status === 'publie' && studentClassCodes.has(exercise.classes?.code ?? '')).map(({ id, title, chapters }) => ({ id, title, chapter: chapters?.title ?? 'Sans chapitre' })));
       }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Impossible de charger la fiche de l’élève.');

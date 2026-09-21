@@ -374,8 +374,8 @@ export const teacherNav: NavGroup[] = [
   {
     items: [
       { label: 'Tableau de bord', href: '/prof', icon: LayoutDashboard },
-      { label: 'Exercices', href: '/prof/exercices', icon: FileText },
       { label: 'Classes', href: '/prof/classes', icon: BookOpen },
+      { label: 'Exercices', href: '/prof/exercices', icon: FileText },
       { label: 'Questions', href: '/prof/questions', icon: HelpCircle },
       { label: 'Instructions', href: '/prof/instructions', icon: MessageSquare },
     ],

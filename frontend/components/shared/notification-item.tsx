@@ -49,7 +49,7 @@ export function NotificationItem({
           <p className="truncate text-sm font-medium text-foreground">{notification.title}</p>
           {!notification.read && <span className="h-2 w-2 shrink-0 rounded-full bg-accent" />}
         </div>
-        <p className="mt-0.5 truncate text-sm text-muted-foreground">{notification.body}</p>
+        {!notification.exercise && <p className="mt-0.5 truncate text-sm text-muted-foreground">{notification.body}</p>}
         {notification.exercise && (
           <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
             <span><span className="font-medium text-foreground">Exercice :</span> {notification.exercise.title}</span>

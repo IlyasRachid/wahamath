@@ -81,6 +81,23 @@ async def create_notifications(client: httpx.AsyncClient, headers: dict[str, str
         'recipient_id': recipient_id, 'type': notification_type, 'title': title, 'body': body, 'href': href,
     } for recipient_id in recipient_ids])
 
+async def delete_exercise_publication_notifications(
+    client: httpx.AsyncClient,
+    headers: dict[str, str],
+    exercise_id: str,
+) -> None:
+    response = await client.delete(
+        '/rest/v1/notifications',
+        params={
+            'type': 'eq.new_exercise',
+            'href': f'eq./eleve/exercices/{exercise_id}',
+        },
+        headers=headers,
+    )
+    if response.is_error:
+        raise HTTPException(status_code=502, detail='Impossible de supprimer les notifications de cet exercice.')
+
+
 async def enforce_write_rate_limit(client: httpx.AsyncClient, settings: Settings, profile_id: str, action: str) -> None:
     limit, window_seconds = WRITE_RATE_LIMITS[action]
     response = await client.post('/rest/v1/rpc/consume_api_rate_limit', headers={'apikey': settings.supabase_secret_key, 'Content-Type': 'application/json'}, json={'p_subject_id': profile_id, 'p_action': action, 'p_limit': limit, 'p_window_seconds': window_seconds})
@@ -1383,6 +1400,9 @@ async def update_exercise(
             if members.is_success:
                 await create_notifications(client, headers, [member['profile_id'] for member in members.json()], 'new_exercise', 'Nouvel exercice publié', clean_title, f'/eleve/exercices/{exercise_id}')
 
+        if publication_status == 'depublie' and current['publication_status'] == 'publie':
+            await delete_exercise_publication_notifications(client, headers, exercise_id)
+
     return update_response.json()[0]
 
 
@@ -1418,6 +1438,8 @@ async def update_exercise_publication(
             members = await client.get('/rest/v1/class_memberships', params={'class_id': f"eq.{before['class_id']}", 'select': 'profile_id'}, headers=headers)
             if members.is_success:
                 await create_notifications(client, headers, [member['profile_id'] for member in members.json()], 'new_exercise', 'Nouvel exercice publié', before['title'], f'/eleve/exercices/{exercise_id}')
+    if response.is_success and payload.publication_status == 'depublie' and before['publication_status'] == 'publie':
+        await delete_exercise_publication_notifications(client, headers, exercise_id)
     if response.is_error:
         raise HTTPException(status_code=502, detail='Impossible de mettre à jour la publication de cet exercice.')
     if not response.json():

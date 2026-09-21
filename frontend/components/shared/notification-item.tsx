@@ -50,6 +50,13 @@ export function NotificationItem({
           {!notification.read && <span className="h-2 w-2 shrink-0 rounded-full bg-accent" />}
         </div>
         <p className="mt-0.5 truncate text-sm text-muted-foreground">{notification.body}</p>
+        {notification.exercise && (
+          <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+            <span><span className="font-medium text-foreground">Exercice :</span> {notification.exercise.title}</span>
+            {notification.exercise.chapter && <span><span className="font-medium text-foreground">Chapitre :</span> {notification.exercise.chapter}</span>}
+            {notification.exercise.level && <span><span className="font-medium text-foreground">Niveau :</span> {notification.exercise.level}</span>}
+          </div>
+        )}
         <p className="mt-1 text-xs text-muted-foreground/70">{timeAgo(notification.createdAt)}</p>
       </div>
     </button>

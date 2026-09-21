@@ -67,6 +67,11 @@ export type Notification = {
   title: string;
   body: string;
   href?: string | null;
+  exercise?: {
+    title: string;
+    chapter?: string | null;
+    level?: string | null;
+  };
   createdAt: string;
   read: boolean;
 };

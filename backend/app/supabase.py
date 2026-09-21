@@ -988,9 +988,38 @@ async def list_notifications(
     headers = {'apikey': settings.supabase_secret_key,}
     async with httpx.AsyncClient(base_url=settings.supabase_url, timeout=20) as client:
         response = await client.get('/rest/v1/notifications', params={'recipient_id': f"eq.{profile['id']}", 'select': 'id,type,title,body,href,read_at,created_at', 'order': 'created_at.desc'}, headers=headers)
-    if response.is_error:
-        raise HTTPException(status_code=502, detail='Impossible de charger les notifications.')
-    return {'items': response.json()}
+        if response.is_error:
+            raise HTTPException(status_code=502, detail='Impossible de charger les notifications.')
+
+        notifications = response.json()
+        exercise_ids = [
+            notification['href'].rsplit('/', 1)[-1]
+            for notification in notifications
+            if (notification.get('href') or '').startswith('/eleve/exercices/')
+        ]
+        if exercise_ids:
+            exercises_response = await client.get(
+                '/rest/v1/exercises',
+                params={
+                    'id': f"in.({','.join(exercise_ids)})",
+                    'select': 'id,title,classes(code),chapters(title)',
+                },
+                headers=headers,
+            )
+            if exercises_response.is_error:
+                raise HTTPException(status_code=502, detail='Impossible de charger les informations des exercices.')
+            exercises_by_id = {exercise['id']: exercise for exercise in exercises_response.json()}
+            for notification in notifications:
+                href = notification.get('href') or ''
+                if href.startswith('/eleve/exercices/'):
+                    exercise = exercises_by_id.get(href.rsplit('/', 1)[-1])
+                    if exercise:
+                        notification['exercise'] = {
+                            'title': exercise['title'],
+                            'chapter': (exercise.get('chapters') or {}).get('title'),
+                            'level': (exercise.get('classes') or {}).get('code'),
+                        }
+    return {'items': notifications}
 
 
 async def mark_notifications_read(

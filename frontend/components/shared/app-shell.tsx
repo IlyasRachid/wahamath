@@ -354,7 +354,7 @@ export const studentNav: NavGroup[] = [
       { label: 'Mes classes', href: '/eleve/classes', icon: BookOpen },
       { label: 'Mes exercices', href: '/eleve/exercices', icon: FileText },
       { label: 'Questions et discussions', href: '/eleve/questions', icon: HelpCircle },
-      { label: 'Instructions du prof', href: '/eleve/instructions', icon: MessageSquare },
+      { label: 'Instructions du professeur', href: '/eleve/instructions', icon: MessageSquare },
       { label: 'Notifications', href: '/eleve/notifications', icon: Bell },
     ],
   },

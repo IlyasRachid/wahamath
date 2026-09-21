@@ -31,6 +31,7 @@ export type Exercise = {
   viewCount: number;
   questionCount: number;
   publishedAt: string;
+  createdAt?: string;
   tags: string[];
   artVariant: number;
   imageUrl?: string;

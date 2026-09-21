@@ -306,8 +306,8 @@ async def accessible_exercises(
                 return []
 
         params = {
-            'select': 'id,title,description,difficulty,tags,published_at,publication_status,image_path,classes(code),chapters(title)',
-            'order': 'published_at.desc',
+            'select': 'id,title,description,difficulty,tags,created_at,published_at,publication_status,image_path,classes(code),chapters(title)',
+            'order': 'created_at.asc',
         }
         # Teachers manage the complete catalogue. Students are deliberately
         # limited to published exercises belonging to one of their memberships.

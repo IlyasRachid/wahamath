@@ -30,10 +30,12 @@ const publicationOptions: FilterOption[] = [
 
 type ClassItem = { code: string; chapters: { id: string; title: string }[] };
 
+const dateValue = (value?: string) => value ? new Date(value).getTime() : Number.MAX_SAFE_INTEGER;
+
 function toExercise(item: any, index: number): Exercise {
   return {
     id: item.id, number: index + 1, title: item.title, classCode: item.classes?.code ?? '', chapter: item.chapters?.title ?? 'Sans chapitre', difficulty: item.difficulty,
-    status: 'nouveau', publicationStatus: item.publication_status, viewCount: 0, questionCount: 0, publishedAt: item.published_at ?? '', tags: item.tags ?? [], artVariant: 1, imageUrl: item.image_url,
+    status: 'nouveau', publicationStatus: item.publication_status, viewCount: 0, questionCount: 0, publishedAt: item.published_at ?? '', createdAt: item.created_at ?? item.published_at ?? '', tags: item.tags ?? [], artVariant: 1, imageUrl: item.image_url,
   };
 }
 
@@ -124,14 +126,18 @@ export default function TeacherExercisesPage() {
     return [{ label: 'Tous les chapitres', value: 'all' }, ...(selectedClass?.chapters.map((chapter) => ({ label: chapter.title, value: chapter.title })) ?? [])];
   }, [classes, classFilter]);
 
-  const filtered = useMemo(() => exercises.filter((exercise) => {
-    const query = search.toLowerCase();
-    return (!query || exercise.title.toLowerCase().includes(query) || exercise.chapter.toLowerCase().includes(query) || exercise.tags.some((tag) => tag.toLowerCase().includes(query)))
-      && (classFilter === 'all' || exercise.classCode === classFilter)
-      && (chapterFilter === 'all' || exercise.chapter === chapterFilter)
-      && (difficultyFilter === 'all' || exercise.difficulty === difficultyFilter)
-      && (publicationFilter === 'all' || exercise.publicationStatus === publicationFilter);
-  }), [exercises, search, classFilter, chapterFilter, difficultyFilter, publicationFilter]);
+  const filtered = useMemo(() => {
+    const matches = exercises.filter((exercise) => {
+      const query = search.toLowerCase();
+      return (!query || exercise.title.toLowerCase().includes(query) || exercise.chapter.toLowerCase().includes(query) || exercise.tags.some((tag) => tag.toLowerCase().includes(query)))
+        && (classFilter === 'all' || exercise.classCode === classFilter)
+        && (chapterFilter === 'all' || exercise.chapter === chapterFilter)
+        && (difficultyFilter === 'all' || exercise.difficulty === difficultyFilter)
+        && (publicationFilter === 'all' || exercise.publicationStatus === publicationFilter);
+    });
+
+    return matches.sort((left, right) => dateValue(left.createdAt ?? left.publishedAt) - dateValue(right.createdAt ?? right.publishedAt));
+  }, [exercises, search, classFilter, chapterFilter, difficultyFilter, publicationFilter]);
   return <div className="space-y-6">
     <PageHeader title="Exercices" subtitle="Gérez les brouillons et les exercices visibles par vos élèves." />
     <div className="flex flex-col gap-2 sm:flex-row sm:items-center">

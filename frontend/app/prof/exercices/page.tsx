@@ -98,7 +98,11 @@ export default function TeacherExercisesPage() {
     try {
       const updated = await request(`/api/exercises/${exercise.id}/publication`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ publication_status: publicationStatus }) });
       invalidateApiCache('/api/exercises', ['exercises']);
-      setExercises((current) => current.map((item) => item.id === exercise.id ? { ...item, publicationStatus: updated.publication_status, publishedAt: updated.published_at ?? item.publishedAt } : item));
+      // The request has succeeded, so use the status that was just requested
+      // instead of waiting for a potentially stale representation returned by
+      // the API. This keeps the badge and the action button in sync on the
+      // first click.
+      setExercises((current) => current.map((item) => item.id === exercise.id ? { ...item, publicationStatus, publishedAt: updated.published_at ?? item.publishedAt } : item));
       toast({ title: publicationStatus === 'publie' ? 'Exercice publié' : 'Exercice dépublié' });
     } catch (requestError) {
       toast({ variant: 'destructive', title: 'Action impossible', description: requestError instanceof Error ? requestError.message : undefined });

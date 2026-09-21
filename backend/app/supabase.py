@@ -1500,8 +1500,11 @@ async def update_exercise_publication(
             members = await client.get('/rest/v1/class_memberships', params={'class_id': f"eq.{before['class_id']}", 'select': 'profile_id'}, headers=headers)
             if members.is_success:
                 await create_notifications(client, headers, [member['profile_id'] for member in members.json()], 'new_exercise', 'Nouvel exercice publié', before['title'], f'/eleve/exercices/{exercise_id}')
-    if response.is_success and payload.publication_status == 'depublie' and before['publication_status'] == 'publie':
-        await delete_exercise_publication_notifications(client, headers, exercise_id, before['title'])
+        if response.is_success and payload.publication_status == 'depublie' and before['publication_status'] == 'publie':
+            # The cleanup must run before the async client is closed. If it
+            # runs afterwards, the exercise changes state but the API returns
+            # an error, leaving the teacher view stale until another click.
+            await delete_exercise_publication_notifications(client, headers, exercise_id, before['title'])
     if response.is_error:
         raise HTTPException(status_code=502, detail='Impossible de mettre à jour la publication de cet exercice.')
     if not response.json():

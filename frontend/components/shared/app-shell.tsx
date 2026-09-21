@@ -352,9 +352,9 @@ export const studentNav: NavGroup[] = [
     items: [
       { label: 'Tableau de bord', href: '/eleve', icon: LayoutDashboard },
       { label: 'Mes classes', href: '/eleve/classes', icon: BookOpen },
-      { label: 'Exercices', href: '/eleve/exercices', icon: FileText },
-      { label: 'Questions', href: '/eleve/questions', icon: HelpCircle },
-      { label: 'Instructions', href: '/eleve/instructions', icon: MessageSquare },
+      { label: 'Mes exercices', href: '/eleve/exercices', icon: FileText },
+      { label: 'Questions et discussions', href: '/eleve/questions', icon: HelpCircle },
+      { label: 'Instructions du prof', href: '/eleve/instructions', icon: MessageSquare },
       { label: 'Notifications', href: '/eleve/notifications', icon: Bell },
     ],
   },

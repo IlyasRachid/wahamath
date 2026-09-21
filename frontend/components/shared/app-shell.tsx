@@ -376,13 +376,23 @@ export const teacherNav: NavGroup[] = [
       { label: 'Tableau de bord', href: '/prof', icon: LayoutDashboard },
       { label: 'Exercices', href: '/prof/exercices', icon: FileText },
       { label: 'Classes', href: '/prof/classes', icon: BookOpen },
+      { label: 'Questions', href: '/prof/questions', icon: HelpCircle },
+      { label: 'Instructions', href: '/prof/instructions', icon: MessageSquare },
+    ],
+  },
+  {
+    separated: true,
+    items: [
       { label: 'Élèves', href: '/prof/eleves', icon: Users },
       { label: 'Inscriptions', href: '/prof/inscriptions', icon: Users },
-      { label: 'Questions', href: '/prof/questions', icon: HelpCircle },
-      { label: 'Réunions', href: '/prof/reunions', icon: CalendarDays },
-      { label: 'Instructions', href: '/prof/instructions', icon: MessageSquare },
       { label: 'Modération', href: '/prof/moderation', icon: Shield },
       { label: 'Activité', href: '/prof/activite', icon: Activity },
+    ],
+  },
+  {
+    separated: true,
+    items: [
+      { label: 'Réunions', href: '/prof/reunions', icon: CalendarDays },
     ],
   },
 ];

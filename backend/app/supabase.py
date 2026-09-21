@@ -624,9 +624,16 @@ async def send_student_instruction(
         if student.is_error or not student.json():
             raise HTTPException(status_code=404, detail='Élève actif introuvable.')
         if payload.exercise_id:
-            exercise = await client.get('/rest/v1/exercises', params={'id': f'eq.{payload.exercise_id}', 'publication_status': 'eq.publie', 'select': 'id'}, headers=headers)
+            exercise = await client.get('/rest/v1/exercises', params={'id': f'eq.{payload.exercise_id}', 'publication_status': 'eq.publie', 'select': 'id,class_id'}, headers=headers)
             if exercise.is_error or not exercise.json():
                 raise HTTPException(status_code=404, detail='Exercice introuvable ou non publié.')
+            membership = await client.get(
+                '/rest/v1/class_memberships',
+                params={'profile_id': f'eq.{profile_id}', 'class_id': f"eq.{exercise.json()[0]['class_id']}", 'select': 'profile_id'},
+                headers=headers,
+            )
+            if membership.is_error or not membership.json():
+                raise HTTPException(status_code=404, detail='Exercice inaccessible pour cet élève.')
         thread_response = await client.post(
             '/rest/v1/private_instruction_threads',
             headers=headers,

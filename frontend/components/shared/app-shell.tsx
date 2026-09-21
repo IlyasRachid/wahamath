@@ -40,6 +40,7 @@ export type NavItem = {
 export type NavGroup = {
   label?: string;
   items: NavItem[];
+  separated?: boolean;
 };
 
 type Props = {
@@ -184,7 +185,7 @@ export function AppShell({ role, navGroups, bottomNav, user, children }: Props) 
 
       <nav className="flex-1 overflow-y-auto px-3 py-4">
         {navGroups.map((group, gi) => (
-          <div key={gi} className="mb-4">
+          <div key={gi} className={cn('mb-4', group.separated && 'mt-4 border-t border-white/10 pt-4')}>
             {group.label && (
               <p className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-wider text-sidebar-foreground/40">
                 {group.label}
@@ -353,9 +354,14 @@ export const studentNav: NavGroup[] = [
       { label: 'Mes classes', href: '/eleve/classes', icon: BookOpen },
       { label: 'Exercices', href: '/eleve/exercices', icon: FileText },
       { label: 'Questions', href: '/eleve/questions', icon: HelpCircle },
-      { label: 'Réunions', href: '/eleve/reunions', icon: CalendarDays },
       { label: 'Instructions', href: '/eleve/instructions', icon: MessageSquare },
       { label: 'Notifications', href: '/eleve/notifications', icon: Bell },
+    ],
+  },
+  {
+    separated: true,
+    items: [
+      { label: 'Réunions', href: '/eleve/reunions', icon: CalendarDays },
     ],
   },
 ];

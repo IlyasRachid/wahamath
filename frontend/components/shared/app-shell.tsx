@@ -61,6 +61,7 @@ export function AppShell({ role, navGroups, bottomNav, user, children }: Props) 
   const previousReportCount = useRef<number | null>(null);
   const previousEnrollmentCount = useRef<number | null>(null);
   const previousNotificationCount = useRef<number | null>(null);
+  const previousNotificationIds = useRef<string | null>(null);
   const previousRevisions = useRef<Record<string, string>>({});
   const [questionCount, setQuestionCount] = useState(0);
   useEffect(() => {
@@ -91,11 +92,16 @@ export function AppShell({ role, navGroups, bottomNav, user, children }: Props) 
       }
       const notifications = await fetch(`${apiUrl}/api/notifications`, { headers });
       if (notifications.ok) {
-        const notificationItems = (await notifications.json()).items as { read_at: string | null; type: string }[];
+        const notificationItems = (await notifications.json()).items as { id: string; read_at: string | null; type: string }[];
         const nextCount = notificationItems.filter((item) => !item.read_at && (role !== 'teacher' || item.type === 'instruction')).length;
-        const cachedNotifications = peekApiCache<{ items: { read_at: string | null; type: string }[] }>('/api/notifications');
+        const notificationIds = notificationItems.map((item) => item.id).join(',');
+        const cachedNotifications = peekApiCache<{ items: { id: string; read_at: string | null; type: string }[] }>('/api/notifications');
         const cachedCount = cachedNotifications?.items.filter((item) => !item.read_at && (role !== 'teacher' || item.type === 'instruction')).length;
-        const changed = previousNotificationCount.current !== nextCount || (cachedCount !== undefined && cachedCount !== nextCount);
+        const cachedIds = cachedNotifications?.items.map((item) => item.id).join(',');
+        const changed = previousNotificationCount.current !== nextCount
+          || previousNotificationIds.current !== notificationIds
+          || (cachedCount !== undefined && cachedCount !== nextCount)
+          || (cachedIds !== undefined && cachedIds !== notificationIds);
         if (changed) {
           // A new private-instruction message produces a notification, so the
           // list and any cached thread must refresh with it.
@@ -104,6 +110,7 @@ export function AppShell({ role, navGroups, bottomNav, user, children }: Props) 
           window.dispatchEvent(new Event('wahamath-instructions-updated'));
         }
         previousNotificationCount.current = nextCount;
+        previousNotificationIds.current = notificationIds;
         setNotificationCount(nextCount);
         setMeetingNotificationCount(role === 'student' ? notificationItems.filter((item) => !item.read_at && item.type === 'meeting').length : 0);
       }

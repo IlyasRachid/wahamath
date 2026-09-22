@@ -184,7 +184,7 @@ function ExerciseViewer({
 
   return (
     <div className="space-y-6">
-      <Breadcrumbs items={[{ label: 'Exercices', href: activeBasePath }, { label: exercise.classes?.code ?? 'Classe', href: !isTeacherView && exercise.classes?.code && exercise.chapters?.title ? `/eleve/exercices?class=${encodeURIComponent(exercise.classes.code)}&chapter=${encodeURIComponent(exercise.chapters.title)}` : undefined }, { label: exercise.title }]} />
+      <Breadcrumbs items={[{ label: 'Exercices', href: activeBasePath }, { label: exercise.classes?.code ?? 'Classe', href: exercise.classes?.code && exercise.chapters?.title ? `${activeBasePath}?${isTeacherView ? 'classe' : 'class'}=${encodeURIComponent(exercise.classes.code)}&chapter=${encodeURIComponent(exercise.chapters.title)}` : undefined }, { label: exercise.title }]} />
       <PageHeader title={exercise.title} subtitle={`${exercise.classes?.code ?? ''} · ${exercise.chapters?.title ?? 'Sans chapitre'}`}>
         <DifficultyBadge difficulty={exercise.difficulty} />
         {isTeacherView && <Button asChild size="sm" variant="outline"><Link href={`/prof/exercices/${params.id}/modifier`}><Pencil className="h-4 w-4" />Modifier</Link></Button>}

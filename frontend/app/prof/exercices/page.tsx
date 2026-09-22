@@ -42,6 +42,7 @@ function toExercise(item: any, index: number): Exercise {
 export default function TeacherExercisesPage() {
   const searchParams = useSearchParams();
   const requestedClass = searchParams.get('classe') ?? 'all';
+  const requestedChapter = searchParams.get('chapter') ?? 'all';
   const requestedSearch = searchParams.get('q') ?? '';
   const cachedExercises = peekApiCache<{ items: any[] }>('/api/exercises');
   const cachedClasses = peekApiCache<{ items: ClassItem[] }>('/api/classes');
@@ -50,7 +51,7 @@ export default function TeacherExercisesPage() {
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState(requestedSearch);
   const [classFilter, setClassFilter] = useState(requestedClass);
-  const [chapterFilter, setChapterFilter] = useState('all');
+  const [chapterFilter, setChapterFilter] = useState(requestedChapter);
   const [difficultyFilter, setDifficultyFilter] = useState('all');
   const [publicationFilter, setPublicationFilter] = useState('all');
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -77,8 +78,8 @@ export default function TeacherExercisesPage() {
 
   useEffect(() => {
     setClassFilter(requestedClass);
-    setChapterFilter('all');
-  }, [requestedClass]);
+    setChapterFilter(requestedChapter);
+  }, [requestedClass, requestedChapter]);
 
   useEffect(() => {
     setSearch(requestedSearch);

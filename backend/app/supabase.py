@@ -1067,6 +1067,28 @@ async def mark_instruction_notifications_read(
     return await mark_notifications_read(notification_type='instruction', profile=profile, settings=settings)
 
 
+async def delete_notification(
+    notification_id: str,
+    profile: dict[str, str] = Depends(require_active_user),
+    settings: Settings = Depends(server_settings),
+) -> dict[str, str]:
+    headers = {
+        'apikey': settings.supabase_secret_key,
+        'Prefer': 'return=representation',
+    }
+    params = {
+        'id': f'eq.{notification_id}',
+        'recipient_id': f"eq.{profile['id']}",
+    }
+    async with httpx.AsyncClient(base_url=settings.supabase_url, timeout=20) as client:
+        response = await client.delete('/rest/v1/notifications', params=params, headers=headers)
+    if response.is_error:
+        raise HTTPException(status_code=502, detail='Impossible de supprimer la notification.')
+    if not response.json():
+        raise HTTPException(status_code=404, detail='Notification introuvable.')
+    return {'status': 'deleted'}
+
+
 async def create_comment(
     exercise_id: str,
     payload: CommentPayload,

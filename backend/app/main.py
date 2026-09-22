@@ -14,6 +14,7 @@ from app.supabase import (
     decide_student_application,
     dismiss_report,
     delete_exercise,
+    delete_notification,
     get_exercise,
     get_exercise_comments,
     get_instruction_thread,
@@ -92,6 +93,7 @@ app.get('/api/notifications', tags=['notifications'])(list_notifications)
 app.post('/api/notifications/read', tags=['notifications'])(mark_notifications_read)
 app.post('/api/notifications/instructions/read', tags=['notifications'])(mark_instruction_notifications_read)
 app.post('/api/notifications/{notification_id}/read', tags=['notifications'])(mark_notifications_read)
+app.delete('/api/notifications/{notification_id}', tags=['notifications'])(delete_notification)
 app.post('/api/comments/{comment_id}/moderate', tags=['moderation'])(moderate_comment)
 app.post('/api/comments/{comment_id}/report', tags=['moderation'])(report_comment)
 app.get('/api/moderation/reports', tags=['moderation'])(list_reports)

@@ -70,6 +70,7 @@ export function AuthLayout({
           {[
             'Exercices par classe',
             'Questions et débats encadrés',
+            'Modération active',
             'Livestreams',
           ].map((f) => (
             <span

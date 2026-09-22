@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { ArrowRight, BookOpen, GraduationCap, MessageCircle, MessageSquare, ShieldCheck } from 'lucide-react';
+import { ArrowRight, BookOpen, GraduationCap, MessageCircle, MessageSquare, ShieldCheck, Video } from 'lucide-react';
 import { WahaLogo } from '@/components/brand/logo';
 import { MathMotifAxes, MathMotifFormula, MathMotifGrid, MathMotifIntegral, MathMotifSigma } from '@/components/math/motifs';
 import { Button } from '@/components/ui/button';
@@ -159,7 +159,7 @@ export default function Home() {
           {[
             { icon: BookOpen, title: 'Exercices par classe', desc: '2SM, 1SM, 2PC&SVT, TCS — organisés par chapitre' },
             { icon: MessageSquare, title: 'Questions et débats encadrés', desc: 'Discussions modérées par les professeurs' },
-            { icon: Video, title: 'Suivre des livestreams', desc: 'Cours et séances en direct avec accompagnement' },
+            { icon: Video, title: 'Cours en direct', desc: 'Cours et séances en direct avec accompagnement' },
           ].map((f) => (
             <div key={f.title} className="flex flex-col items-center text-center">
               <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-lg bg-secondary text-primary">
@@ -167,6 +167,11 @@ export default function Home() {
               </div>
               <h3 className="text-sm font-semibold text-foreground">{f.title}</h3>
               <p className="mt-1 text-xs text-muted-foreground">{f.desc}</p>
+              {f.icon === Video && (
+                <Button asChild variant="outline" size="sm" className="mt-3">
+                  <Link href="/connexion?role=student">Livestreams</Link>
+                </Button>
+              )}
             </div>
           ))}
         </div>

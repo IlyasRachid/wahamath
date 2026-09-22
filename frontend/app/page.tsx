@@ -59,9 +59,9 @@ export default function Home() {
             <span className="text-primary">claires et accessibles</span>
           </h1>
           <p className="mx-auto mt-6 max-w-xl text-balance text-base leading-relaxed text-muted-foreground sm:text-lg">
-            WahaMath accompagne les lycéens marocains dans la pratique des mathématiques
-            avec des exercices, des discussions encadrées par les professeurs, et un suivi
-            structuré par classe et chapitre.
+            WahaMath accompanies high school students in learning mathematics through
+            exercises, discussions supervised by teachers, livestreams, and a structured
+            follow-up by level and chapter.
           </p>
         </div>
 

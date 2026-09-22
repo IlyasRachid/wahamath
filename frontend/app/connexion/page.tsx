@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -256,12 +256,15 @@ export default function LoginPage() {
       </form>
 
       {/* Footer */}
-      <div className="mt-8 text-center text-sm text-muted-foreground">
-        Vous n&apos;avez pas encore de compte ?{' '}
-        <Link href="/inscription" className="font-semibold text-primary transition-colors hover:text-primary/80">
-          Créer un compte
-        </Link>
-      </div>
+      {role === 'student' && (
+        <div className="mt-8 text-center text-sm text-muted-foreground">
+          Vous n&apos;avez pas encore de compte ?{' '}
+          <Link href="/inscription" className="font-semibold text-primary transition-colors hover:text-primary/80">
+            Créer un compte
+          </Link>
+        </div>
+      )}
     </AuthLayout>
   );
 }
+

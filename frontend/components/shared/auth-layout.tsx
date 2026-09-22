@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { WahaLogo } from '@/components/brand/logo';
 import {
@@ -70,7 +70,7 @@ export function AuthLayout({
           {[
             'Exercices par classe',
             'Questions et débats encadrés',
-            'Suivre des livestreams',
+            'Livestreams',
           ].map((f) => (
             <span
               key={f}
@@ -107,3 +107,4 @@ export function AuthLayout({
     </div>
   );
 }
+

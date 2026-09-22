@@ -25,9 +25,11 @@ const PAGE_SIZE = 5;
 export default function ExercisesPage() {
   const searchParams = useSearchParams();
   const requestedChapter = searchParams.get('chapter') ?? 'all';
+  const requestedClass = searchParams.get('class') ?? 'all';
   const requestedSearch = searchParams.get('q') ?? '';
   const [search, setSearch] = useState(requestedSearch);
   const [chapterFilter, setChapterFilter] = useState(requestedChapter);
+  const [classFilter, setClassFilter] = useState(requestedClass);
   const [difficultyFilter, setDifficultyFilter] = useState('all');
   const [page, setPage] = useState(1);
   const cachedExercises = peekApiCache<{ items: any[] }>('/api/exercises');
@@ -70,8 +72,9 @@ export default function ExercisesPage() {
 
   useEffect(() => {
     setChapterFilter(requestedChapter);
+    setClassFilter(requestedClass);
     setPage(1);
-  }, [requestedChapter]);
+  }, [requestedChapter, requestedClass]);
 
   useEffect(() => {
     setSearch(requestedSearch);
@@ -82,6 +85,7 @@ export default function ExercisesPage() {
     // The server is the authority for publication and class access. At this
     // point every returned item is available to the connected student.
     let result = [...exercises];
+    if (classFilter !== 'all') result = result.filter((e) => e.classCode === classFilter);
     if (search) {
       const q = search.toLowerCase();
       result = result.filter(
@@ -92,7 +96,7 @@ export default function ExercisesPage() {
     if (difficultyFilter !== 'all') result = result.filter((e) => e.difficulty === difficultyFilter);
 
     return result;
-  }, [exercises, search, chapterFilter, difficultyFilter]);
+  }, [exercises, search, classFilter, chapterFilter, difficultyFilter]);
   const chapterOptions: FilterOption[] = useMemo(() => [
     { label: 'Tous les chapitres', value: 'all' },
     ...Array.from(new Set(classChapters.map((chapter) => chapter.title))).sort((a, b) => a.localeCompare(b, 'fr')).map((chapter) => ({ label: chapter, value: chapter })),
@@ -118,6 +122,7 @@ export default function ExercisesPage() {
       {/* Filters */}
       <FilterBar
         filters={[
+          { label: 'Niveau', value: classFilter, options: [{ label: 'Tous les niveaux', value: 'all' }, ...Array.from(new Set(exercises.map((exercise) => exercise.classCode).filter(Boolean))).sort().map((code) => ({ label: code, value: code }))], onChange: (v) => { setClassFilter(v); resetPage(); } },
           { label: 'Chapitre', value: chapterFilter, options: chapterOptions, onChange: (v) => { setChapterFilter(v); resetPage(); } },
           { label: 'Difficulté', value: difficultyFilter, options: difficultyOptions, onChange: (v) => { setDifficultyFilter(v); resetPage(); } },
         ]}

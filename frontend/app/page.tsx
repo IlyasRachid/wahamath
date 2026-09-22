@@ -101,10 +101,10 @@ export default function Home() {
               <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-xl bg-accent/10 text-accent">
                 <ShieldCheck className="h-7 w-7" />
               </div>
-              <h2 className="text-xl font-bold text-foreground">Je suis professeur</h2>
+              <h2 className="text-xl font-bold text-foreground">Espace professeur</h2>
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                Publie des exercices, encadre les discussions, modère les échanges
-                et suis l’activité de tes classes.
+                Publier des exercices, encadrer les discussions, modérer les échanges,
+                enseigner par des livestreams et suivre l’activité des classes.
               </p>
               <div className="mt-6 flex items-center gap-1.5 text-sm font-medium text-accent transition-all group-hover:gap-2.5">
                 Accéder à l’espace professeur

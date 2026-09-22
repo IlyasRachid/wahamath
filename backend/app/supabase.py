@@ -666,7 +666,7 @@ async def get_instruction_thread(
     async with httpx.AsyncClient(base_url=settings.supabase_url, timeout=20) as client:
         thread_response = await client.get(
             '/rest/v1/private_instruction_threads',
-            params={'id': f'eq.{thread_id}', 'select': 'id,student_id,teacher_id,exercise_id,status,created_at,closed_at,exercises(id,title)'},
+            params={'id': f'eq.{thread_id}', 'select': 'id,student_id,teacher_id,exercise_id,status,created_at,closed_at,exercises(id,title,chapters(title))'},
             headers=headers,
         )
         if thread_response.is_error or not thread_response.json():
@@ -693,7 +693,7 @@ async def list_instruction_threads(
     async with httpx.AsyncClient(base_url=settings.supabase_url, timeout=20) as client:
         response = await client.get(
             '/rest/v1/private_instruction_threads',
-            params={participant_field: f"eq.{profile['id']}", 'select': 'id,student_id,teacher_id,exercise_id,status,created_at,closed_at,exercises(id,title)', 'order': 'created_at.desc'},
+            params={participant_field: f"eq.{profile['id']}", 'select': 'id,student_id,teacher_id,exercise_id,status,created_at,closed_at,exercises(id,title,chapters(title))', 'order': 'created_at.desc'},
             headers=headers,
         )
     if response.is_error:

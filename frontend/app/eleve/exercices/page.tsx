@@ -34,9 +34,25 @@ export default function ExercisesPage() {
   const [page, setPage] = useState(1);
   const cachedExercises = peekApiCache<{ items: any[] }>('/api/exercises');
   const cachedClasses = peekApiCache<{ items: { chapters: { id: string; title: string }[] }[] }>('/api/classes');
-  const toExercises = (items: any[]) => items.map((item: any, index: number) => ({
-    id: item.id, number: index + 1, title: item.title, classCode: item.classes?.code ?? '', chapter: item.chapters?.title ?? 'Sans chapitre', difficulty: item.difficulty, status: 'nouveau' as const, publicationStatus: item.publication_status, viewCount: 0, questionCount: 0, publishedAt: item.published_at, tags: item.tags ?? [], artVariant: 1, imageUrl: item.image_url,
-  }));
+  const toExercises = (items: any[]) => {
+    const mapped: Exercise[] = items.map((item: any) => ({
+      id: item.id, number: 0, title: item.title, classCode: item.classes?.code ?? '', chapter: item.chapters?.title ?? 'Sans chapitre', difficulty: item.difficulty, status: 'nouveau' as const, publicationStatus: item.publication_status, viewCount: 0, questionCount: 0, publishedAt: item.published_at, createdAt: item.created_at ?? item.published_at, tags: item.tags ?? [], artVariant: 1, imageUrl: item.image_url,
+    }));
+    const ordered = [...mapped].sort((left, right) => {
+      const leftTime = new Date(left.createdAt ?? left.publishedAt).getTime();
+      const rightTime = new Date(right.createdAt ?? right.publishedAt).getTime();
+      return left.classCode.localeCompare(right.classCode) || left.chapter.localeCompare(right.chapter, 'fr') || leftTime - rightTime;
+    });
+    const numbers = new Map<string, number>();
+    let group = '';
+    let number = 0;
+    for (const exercise of ordered) {
+      const key = `${exercise.classCode}\u0000${exercise.chapter}`;
+      if (key !== group) { group = key; number = 0; }
+      numbers.set(exercise.id, ++number);
+    }
+    return mapped.map((exercise) => ({ ...exercise, number: numbers.get(exercise.id) ?? 1 }));
+  };
   const [exercises, setExercises] = useState<Exercise[]>(() => cachedExercises ? toExercises(cachedExercises.items) : []);
   const [loading, setLoading] = useState(!cachedExercises);
   const [loadError, setLoadError] = useState<string | null>(null);

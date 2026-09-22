@@ -69,8 +69,8 @@ export function AuthLayout({
         <div className="relative z-10 flex flex-wrap gap-3">
           {[
             'Exercices par classe',
-            'Questions encadrées',
-            'Modération active',
+            'Questions et débats encadrés',
+            'Suivre des livestreams',
           ].map((f) => (
             <span
               key={f}

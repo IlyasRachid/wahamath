@@ -158,8 +158,8 @@ export default function Home() {
         <div className="mx-auto mt-20 grid max-w-4xl gap-6 sm:grid-cols-3">
           {[
             { icon: BookOpen, title: 'Exercices par classe', desc: '2SM, 1SM, 2PC&SVT, TCS — organisés par chapitre' },
-            { icon: MessageSquare, title: 'Questions encadrées', desc: 'Discussions modérées par les professeurs' },
-            { icon: ShieldCheck, title: 'Environnement sain', desc: 'Modération et bienveillance garanties' },
+            { icon: MessageSquare, title: 'Questions et débats encadrés', desc: 'Discussions modérées par les professeurs' },
+            { icon: Video, title: 'Suivre des livestreams', desc: 'Cours et séances en direct avec accompagnement' },
           ].map((f) => (
             <div key={f.title} className="flex flex-col items-center text-center">
               <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-lg bg-secondary text-primary">

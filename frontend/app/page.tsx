@@ -78,10 +78,10 @@ export default function Home() {
               <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-xl bg-primary/10 text-primary">
                 <GraduationCap className="h-7 w-7" />
               </div>
-              <h2 className="text-xl font-bold text-foreground">Je suis élève</h2>
+              <h2 className="text-xl font-bold text-foreground">Espace élève</h2>
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                Accède à tes classes, résous des exercices et pose tes questions
-                à tes professeurs et camarades.
+                Accéder aux classes, résoudre des exercices, interagir avec les
+                professeurs et les camarades et suivre des livestreams.
               </p>
               <div className="mt-6 flex items-center gap-1.5 text-sm font-medium text-primary transition-all group-hover:gap-2.5">
                 Accéder à l’espace élève

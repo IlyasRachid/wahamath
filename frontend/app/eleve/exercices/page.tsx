@@ -31,7 +31,7 @@ export default function ExercisesPage() {
   const [chapterFilter, setChapterFilter] = useState(requestedChapter);
   const [classFilter, setClassFilter] = useState(requestedClass);
   const [difficultyFilter, setDifficultyFilter] = useState('all');
-  const [sortOrder, setSortOrder] = useState<'default' | 'asc' | 'desc'>('default');
+  const [sortOrder, setSortOrder] = useState<'default' | 'asc' | 'desc'>('asc');
   const [page, setPage] = useState(1);
   const cachedExercises = peekApiCache<{ items: any[] }>('/api/exercises');
   const cachedClasses = peekApiCache<{ items: { chapters: { id: string; title: string }[] }[] }>('/api/classes');

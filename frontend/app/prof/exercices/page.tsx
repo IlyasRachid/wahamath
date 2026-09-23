@@ -55,7 +55,7 @@ export default function TeacherExercisesPage() {
   const [chapterFilter, setChapterFilter] = useState(requestedChapter);
   const [difficultyFilter, setDifficultyFilter] = useState('all');
   const [publicationFilter, setPublicationFilter] = useState('all');
-  const [sortOrder, setSortOrder] = useState<'default' | 'asc' | 'desc'>('default');
+  const [sortOrder, setSortOrder] = useState<'default' | 'asc' | 'desc'>('asc');
   const [busyId, setBusyId] = useState<string | null>(null);
   const [exerciseToDelete, setExerciseToDelete] = useState<Exercise | null>(null);
   const [previewExercise, setPreviewExercise] = useState<Exercise | null>(null);

@@ -4,7 +4,7 @@ import { apiUrl } from '@/lib/api-url';
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { ArrowDownWideNarrow, Eye, FileX, Loader2, Plus, Send, Trash2, Undo2 } from 'lucide-react';
+import { ArrowDownWideNarrow, ArrowUpWideNarrow, Eye, FileX, Loader2, Plus, Send, Trash2, Undo2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 import { cachedApiGet, invalidateApiCache, peekApiCache } from '@/lib/api-cache';
 import type { Exercise, PublicationStatus } from '@/lib/types';
@@ -55,7 +55,7 @@ export default function TeacherExercisesPage() {
   const [chapterFilter, setChapterFilter] = useState(requestedChapter);
   const [difficultyFilter, setDifficultyFilter] = useState('all');
   const [publicationFilter, setPublicationFilter] = useState('all');
-  const [ascending, setAscending] = useState(false);
+  const [sortOrder, setSortOrder] = useState<'default' | 'asc' | 'desc'>('default');
   const [busyId, setBusyId] = useState<string | null>(null);
   const [exerciseToDelete, setExerciseToDelete] = useState<Exercise | null>(null);
   const [previewExercise, setPreviewExercise] = useState<Exercise | null>(null);
@@ -143,17 +143,22 @@ export default function TeacherExercisesPage() {
         && (publicationFilter === 'all' || exercise.publicationStatus === publicationFilter);
     });
 
-    return matches.sort(ascending
-      ? (left, right) => left.classCode.localeCompare(right.classCode, 'fr') || left.chapter.localeCompare(right.chapter, 'fr') || exerciseNumber(left.title) - exerciseNumber(right.title) || left.title.localeCompare(right.title, 'fr')
+    return matches.sort(sortOrder !== 'default'
+      ? (left, right) => {
+        const groupComparison = left.classCode.localeCompare(right.classCode, 'fr') || left.chapter.localeCompare(right.chapter, 'fr');
+        if (groupComparison) return groupComparison;
+        const numberComparison = exerciseNumber(left.title) - exerciseNumber(right.title);
+        return (sortOrder === 'asc' ? numberComparison : -numberComparison) || left.title.localeCompare(right.title, 'fr');
+      }
       : (left, right) => dateValue(left.createdAt ?? left.publishedAt) - dateValue(right.createdAt ?? right.publishedAt));
-  }, [exercises, search, classFilter, chapterFilter, difficultyFilter, publicationFilter, ascending]);
+  }, [exercises, search, classFilter, chapterFilter, difficultyFilter, publicationFilter, sortOrder]);
   const previewNumber = previewExercise ? exerciseNumber(previewExercise.title) : null;
   return <div className="space-y-6">
     <PageHeader title="Exercices" subtitle="Gérez les brouillons et les exercices visibles par vos élèves." />
     <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
       <SearchInput value={search} onChange={setSearch} placeholder="Rechercher un exercice..." className="max-w-md" />
       <Button asChild className="sm:shrink-0"><Link href="/prof/ajouter"><Plus className="h-4 w-4" />Ajouter un exercice</Link></Button>
-      <Button type="button" variant="outline" className="sm:shrink-0" onClick={() => setAscending(true)} disabled={ascending}><ArrowDownWideNarrow className="h-4 w-4" />Trier par numéro croissant</Button>
+      <Button type="button" variant="outline" className="sm:shrink-0" onClick={() => setSortOrder((current) => current === 'asc' ? 'desc' : 'asc')}>{sortOrder === 'desc' ? <ArrowUpWideNarrow className="h-4 w-4" /> : <ArrowDownWideNarrow className="h-4 w-4" />}Trier par numéro {sortOrder === 'asc' ? 'décroissant' : 'croissant'}</Button>
     </div>
     <FilterBar filters={[
       { label: 'Classe', value: classFilter, options: classOptions, onChange: (value) => { setClassFilter(value); setChapterFilter('all'); } },

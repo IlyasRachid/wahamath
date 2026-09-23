@@ -144,18 +144,19 @@ export default function ExercisesPage() {
         placeholder="Rechercher un exercice, un chapitre, un tag..."
         className="max-w-md"
       />
-      <Button type="button" variant="outline" onClick={() => { setSortOrder((current) => current === 'asc' ? 'desc' : 'asc'); resetPage(); }}>
-        {sortOrder === 'desc' ? <ArrowUpWideNarrow className="h-4 w-4" /> : <ArrowDownWideNarrow className="h-4 w-4" />}Trier par numéro {sortOrder === 'asc' ? 'décroissant' : 'croissant'}
-      </Button>
-
       {/* Filters */}
-      <FilterBar
+      <div className="flex min-w-0 items-center gap-2">
+      <FilterBar className="min-w-0 flex-1"
         filters={[
           { label: 'Niveau', value: classFilter, options: [{ label: 'Tous les niveaux', value: 'all' }, ...Array.from(new Set(exercises.map((exercise) => exercise.classCode).filter(Boolean))).sort().map((code) => ({ label: code, value: code }))], onChange: (v) => { setClassFilter(v); resetPage(); } },
           { label: 'Chapitre', value: chapterFilter, options: chapterOptions, onChange: (v) => { setChapterFilter(v); resetPage(); } },
           { label: 'Difficulté', value: difficultyFilter, options: difficultyOptions, onChange: (v) => { setDifficultyFilter(v); resetPage(); } },
         ]}
       />
+      <Button type="button" variant="outline" className="shrink-0 whitespace-nowrap" onClick={() => { setSortOrder((current) => current === 'asc' ? 'desc' : 'asc'); resetPage(); }}>
+        {sortOrder === 'desc' ? <ArrowUpWideNarrow className="h-4 w-4" /> : <ArrowDownWideNarrow className="h-4 w-4" />}Trier par numéro {sortOrder === 'asc' ? 'décroissant' : 'croissant'}
+      </Button>
+      </div>
 
       <p className="text-sm text-muted-foreground">
         {filtered.length} exercice{filtered.length > 1 ? 's' : ''} trouvé{filtered.length > 1 ? 's' : ''}

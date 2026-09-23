@@ -4,7 +4,7 @@ import { apiUrl } from '@/lib/api-url';
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { Eye, FileX, Loader2, Plus, Send, Trash2, Undo2 } from 'lucide-react';
+import { ArrowDownWideNarrow, Eye, FileX, Loader2, Plus, Send, Trash2, Undo2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 import { cachedApiGet, invalidateApiCache, peekApiCache } from '@/lib/api-cache';
 import type { Exercise, PublicationStatus } from '@/lib/types';
@@ -31,6 +31,7 @@ const publicationOptions: FilterOption[] = [
 type ClassItem = { code: string; chapters: { id: string; title: string }[] };
 
 const dateValue = (value?: string) => value ? new Date(value).getTime() : Number.MAX_SAFE_INTEGER;
+const exerciseNumber = (title: string) => Number(title.match(/\d+/)?.[0] ?? Number.MAX_SAFE_INTEGER);
 
 function toExercise(item: any, index: number): Exercise {
   return {
@@ -54,6 +55,7 @@ export default function TeacherExercisesPage() {
   const [chapterFilter, setChapterFilter] = useState(requestedChapter);
   const [difficultyFilter, setDifficultyFilter] = useState('all');
   const [publicationFilter, setPublicationFilter] = useState('all');
+  const [ascending, setAscending] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [exerciseToDelete, setExerciseToDelete] = useState<Exercise | null>(null);
   const [previewExercise, setPreviewExercise] = useState<Exercise | null>(null);
@@ -141,8 +143,10 @@ export default function TeacherExercisesPage() {
         && (publicationFilter === 'all' || exercise.publicationStatus === publicationFilter);
     });
 
-    return matches.sort((left, right) => dateValue(left.createdAt ?? left.publishedAt) - dateValue(right.createdAt ?? right.publishedAt));
-  }, [exercises, search, classFilter, chapterFilter, difficultyFilter, publicationFilter]);
+    return matches.sort(ascending
+      ? (left, right) => left.classCode.localeCompare(right.classCode, 'fr') || left.chapter.localeCompare(right.chapter, 'fr') || exerciseNumber(left.title) - exerciseNumber(right.title) || left.title.localeCompare(right.title, 'fr')
+      : (left, right) => dateValue(left.createdAt ?? left.publishedAt) - dateValue(right.createdAt ?? right.publishedAt));
+  }, [exercises, search, classFilter, chapterFilter, difficultyFilter, publicationFilter, ascending]);
   const previewNumber = previewExercise
     ? exercises
       .filter((exercise) => exercise.classCode === previewExercise.classCode && exercise.chapter === previewExercise.chapter)
@@ -154,6 +158,7 @@ export default function TeacherExercisesPage() {
     <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
       <SearchInput value={search} onChange={setSearch} placeholder="Rechercher un exercice..." className="max-w-md" />
       <Button asChild className="sm:shrink-0"><Link href="/prof/ajouter"><Plus className="h-4 w-4" />Ajouter un exercice</Link></Button>
+      <Button type="button" variant="outline" className="sm:shrink-0" onClick={() => setAscending(true)} disabled={ascending}><ArrowDownWideNarrow className="h-4 w-4" />Trier par numéro croissant</Button>
     </div>
     <FilterBar filters={[
       { label: 'Classe', value: classFilter, options: classOptions, onChange: (value) => { setClassFilter(value); setChapterFilter('all'); } },

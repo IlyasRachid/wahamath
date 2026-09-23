@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { FileX } from 'lucide-react';
+import { ArrowDownWideNarrow, FileX } from 'lucide-react';
 import type { Exercise } from '@/lib/types';
 import { cachedApiGet, peekApiCache } from '@/lib/api-cache';
 import { ExerciseCard } from '@/components/shared/exercise-card';
@@ -31,6 +31,7 @@ export default function ExercisesPage() {
   const [chapterFilter, setChapterFilter] = useState(requestedChapter);
   const [classFilter, setClassFilter] = useState(requestedClass);
   const [difficultyFilter, setDifficultyFilter] = useState('all');
+  const [ascending, setAscending] = useState(false);
   const [page, setPage] = useState(1);
   const cachedExercises = peekApiCache<{ items: any[] }>('/api/exercises');
   const cachedClasses = peekApiCache<{ items: { chapters: { id: string; title: string }[] }[] }>('/api/classes');
@@ -111,8 +112,12 @@ export default function ExercisesPage() {
     if (chapterFilter !== 'all') result = result.filter((e) => e.chapter === chapterFilter);
     if (difficultyFilter !== 'all') result = result.filter((e) => e.difficulty === difficultyFilter);
 
+    if (ascending) {
+      const exerciseNumber = (title: string) => Number(title.match(/\d+/)?.[0] ?? Number.MAX_SAFE_INTEGER);
+      result.sort((left, right) => left.classCode.localeCompare(right.classCode, 'fr') || left.chapter.localeCompare(right.chapter, 'fr') || exerciseNumber(left.title) - exerciseNumber(right.title) || left.title.localeCompare(right.title, 'fr'));
+    }
     return result;
-  }, [exercises, search, classFilter, chapterFilter, difficultyFilter]);
+  }, [exercises, search, classFilter, chapterFilter, difficultyFilter, ascending]);
   const chapterOptions: FilterOption[] = useMemo(() => [
     { label: 'Tous les chapitres', value: 'all' },
     ...Array.from(new Set(classChapters.map((chapter) => chapter.title))).sort((a, b) => a.localeCompare(b, 'fr')).map((chapter) => ({ label: chapter, value: chapter })),
@@ -134,6 +139,9 @@ export default function ExercisesPage() {
         placeholder="Rechercher un exercice, un chapitre, un tag..."
         className="max-w-md"
       />
+      <Button type="button" variant="outline" onClick={() => { setAscending(true); resetPage(); }} disabled={ascending}>
+        <ArrowDownWideNarrow className="h-4 w-4" />Trier par numéro croissant
+      </Button>
 
       {/* Filters */}
       <FilterBar

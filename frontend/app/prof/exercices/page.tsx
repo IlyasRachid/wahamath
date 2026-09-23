@@ -147,12 +147,7 @@ export default function TeacherExercisesPage() {
       ? (left, right) => left.classCode.localeCompare(right.classCode, 'fr') || left.chapter.localeCompare(right.chapter, 'fr') || exerciseNumber(left.title) - exerciseNumber(right.title) || left.title.localeCompare(right.title, 'fr')
       : (left, right) => dateValue(left.createdAt ?? left.publishedAt) - dateValue(right.createdAt ?? right.publishedAt));
   }, [exercises, search, classFilter, chapterFilter, difficultyFilter, publicationFilter, ascending]);
-  const previewNumber = previewExercise
-    ? exercises
-      .filter((exercise) => exercise.classCode === previewExercise.classCode && exercise.chapter === previewExercise.chapter)
-      .sort((left, right) => dateValue(left.createdAt ?? left.publishedAt) - dateValue(right.createdAt ?? right.publishedAt))
-      .findIndex((exercise) => exercise.id === previewExercise.id) + 1
-    : null;
+  const previewNumber = previewExercise ? exerciseNumber(previewExercise.title) : null;
   return <div className="space-y-6">
     <PageHeader title="Exercices" subtitle="Gérez les brouillons et les exercices visibles par vos élèves." />
     <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -189,7 +184,7 @@ export default function TeacherExercisesPage() {
       })}</div>}
     <Dialog open={Boolean(previewExercise)} onOpenChange={(open) => !open && setPreviewExercise(null)}>
       <DialogContent className="max-w-4xl">
-        <DialogHeader><DialogTitle>Aperçu : Exercice n°{previewNumber}</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>Aperçu : {previewExercise?.title ?? `Exercice n°${previewNumber}`}</DialogTitle></DialogHeader>
         {previewExercise?.imageUrl && <img src={previewExercise.imageUrl} alt={`Aperçu : ${previewExercise.title}`} className="max-h-[70vh] w-full rounded-md object-contain" />}
       </DialogContent>
     </Dialog>

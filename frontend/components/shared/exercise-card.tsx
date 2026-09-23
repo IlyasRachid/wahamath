@@ -53,7 +53,7 @@ export function ExerciseCard({ exercise, href, className }: Props) {
       </div>
       <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
         <DialogContent className="max-w-4xl">
-          <DialogHeader><DialogTitle>Aperçu : Exercice n°{exercise.number}</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Aperçu : {exercise.title}</DialogTitle></DialogHeader>
           {exercise.imageUrl && <img src={exercise.imageUrl} alt={`Aperçu : ${exercise.title}`} className="max-h-[70vh] w-full rounded-md object-contain" />}
         </DialogContent>
       </Dialog>

@@ -4,7 +4,7 @@ import { apiUrl } from '@/lib/api-url';
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { ArrowDownWideNarrow, ArrowUpWideNarrow, Eye, FileX, Loader2, Plus, Send, Trash2, Undo2 } from 'lucide-react';
+import { ArrowDownWideNarrow, ArrowUpWideNarrow, Eye, FileX, Hash, Loader2, Plus, Send, Trash2, Undo2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 import { cachedApiGet, invalidateApiCache, peekApiCache } from '@/lib/api-cache';
 import type { Exercise, PublicationStatus } from '@/lib/types';
@@ -152,6 +152,7 @@ export default function TeacherExercisesPage() {
       }
       : (left, right) => dateValue(left.createdAt ?? left.publishedAt) - dateValue(right.createdAt ?? right.publishedAt));
   }, [exercises, search, classFilter, chapterFilter, difficultyFilter, publicationFilter, sortOrder]);
+  const exerciseCount = useMemo(() => exercises.filter((exercise) => (classFilter === 'all' || exercise.classCode === classFilter) && (chapterFilter === 'all' || exercise.chapter === chapterFilter)).length, [exercises, classFilter, chapterFilter]);
   const previewNumber = previewExercise ? exerciseNumber(previewExercise.title) : null;
   return <div className="space-y-6">
     <PageHeader title="Exercices" subtitle="Gérez les brouillons et les exercices visibles par vos élèves." />
@@ -159,6 +160,7 @@ export default function TeacherExercisesPage() {
       <SearchInput value={search} onChange={setSearch} placeholder="Rechercher un exercice..." className="max-w-md" />
       <Button asChild className="sm:shrink-0"><Link href="/prof/ajouter"><Plus className="h-4 w-4" />Ajouter un exercice</Link></Button>
       <Button type="button" variant="outline" className="sm:shrink-0" onClick={() => setSortOrder((current) => current === 'asc' ? 'desc' : 'asc')}>{sortOrder === 'desc' ? <ArrowUpWideNarrow className="h-4 w-4" /> : <ArrowDownWideNarrow className="h-4 w-4" />}Trier par numéro {sortOrder === 'asc' ? 'décroissant' : 'croissant'}</Button>
+      <Button type="button" variant="outline" className="sm:shrink-0" aria-live="polite"><Hash className="h-4 w-4" />{exerciseCount} exercice{exerciseCount === 1 ? '' : 's'}</Button>
     </div>
     <FilterBar filters={[
       { label: 'Classe', value: classFilter, options: classOptions, onChange: (value) => { setClassFilter(value); setChapterFilter('all'); } },

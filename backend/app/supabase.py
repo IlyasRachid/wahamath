@@ -330,6 +330,7 @@ async def accessible_exercises(
 ) -> list[dict]:
     service_headers = {
         'apikey': settings.supabase_secret_key,
+        'Authorization': f'Bearer {settings.supabase_secret_key}',
     }
     async with httpx.AsyncClient(base_url=settings.supabase_url, timeout=30) as client:
         class_ids: list[str] | None = None
@@ -1337,6 +1338,7 @@ async def create_exercise(
 
     service_headers = {
         'apikey': settings.supabase_secret_key,
+        'Authorization': f'Bearer {settings.supabase_secret_key}',
     }
     async with httpx.AsyncClient(base_url=settings.supabase_url, timeout=30) as client:
         await enforce_write_rate_limit(client, settings, teacher['id'], 'exercise_upload')
@@ -1416,7 +1418,10 @@ async def update_exercise(
         raise HTTPException(status_code=400, detail='Utilisez une image PNG, JPEG ou WebP.')
 
     parsed_tags = [tag.strip().lower() for tag in tags.split(',') if tag.strip()][:10]
-    headers = {'apikey': settings.supabase_secret_key,}
+    headers = {
+        'apikey': settings.supabase_secret_key,
+        'Authorization': f'Bearer {settings.supabase_secret_key}',
+    }
     new_image_path: str | None = None
     async with httpx.AsyncClient(base_url=settings.supabase_url, timeout=30) as client:
         current_response = await client.get(
@@ -1548,6 +1553,7 @@ async def delete_exercise(
 ) -> dict[str, str]:
     headers = {
         'apikey': settings.supabase_secret_key,
+        'Authorization': f'Bearer {settings.supabase_secret_key}',
         'Prefer': 'return=representation',
     }
     async with httpx.AsyncClient(base_url=settings.supabase_url, timeout=30) as client:

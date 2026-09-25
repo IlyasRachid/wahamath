@@ -56,9 +56,13 @@ function ImageViewport({ src, alt, zoom, fullscreen = false }: { src: string; al
   </div>;
 }
 
-export function ExerciseImageViewer({ src, alt, title }: { src: string; alt: string; title: string }) {
+export function ExerciseImageViewer({ src, alt, title }: { src: string | null; alt: string; title: string }) {
   const [zoom, setZoom] = useState(1);
   const [fullscreen, setFullscreen] = useState(false);
+
+  if (!src) {
+    return <Card><CardContent className="p-6 text-sm text-muted-foreground">L’image de cet énoncé est temporairement indisponible.</CardContent></Card>;
+  }
 
   const controls = <div className="flex items-center gap-1">
     <ZoomControls zoom={zoom} onZoom={setZoom} onFullscreen={() => setFullscreen((open) => !open)} />

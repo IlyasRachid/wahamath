@@ -22,7 +22,7 @@ type RemoteExercise = {
   description: string | null;
   difficulty: 'facile' | 'moyen' | 'difficile';
   published_at: string;
-  image_url: string;
+  image_url: string | null;
   classes: { code: string } | null;
   chapters: { title: string } | null;
 };

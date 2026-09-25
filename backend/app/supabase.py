@@ -1,5 +1,6 @@
 import uuid
 import asyncio
+import logging
 import time
 import re
 import unicodedata
@@ -11,11 +12,13 @@ from pydantic import BaseModel
 
 from app.config import Settings, get_settings
 
+logger = logging.getLogger(__name__)
+
 ALLOWED_IMAGE_TYPES = {'image/png', 'image/jpeg', 'image/webp'}
 MAX_IMAGE_BYTES = 10 * 1024 * 1024
 SIGNED_IMAGE_CACHE_TTL_SECONDS = 540
 signed_image_cache: dict[str, tuple[str, float]] = {}
-signing_image_requests: dict[str, asyncio.Task[tuple[str, str]]] = {}
+signing_image_requests: dict[str, asyncio.Task[str | None]] = {}
 WRITE_RATE_LIMITS = {'comment': (12, 60), 'report': (5, 300), 'exercise_upload': (12, 3600)}
 
 
@@ -365,37 +368,58 @@ async def accessible_exercises(
         now = time.monotonic()
         missing_paths = list({exercise['image_path'] for exercise in exercises if exercise['image_path'] not in signed_image_cache or signed_image_cache[exercise['image_path']][1] <= now})
 
-        async def sign_path(path: str) -> tuple[str, str]:
+        async def sign_path(path: str) -> tuple[str, str | None]:
             current_request = signing_image_requests.get(path)
             if current_request is None:
-                async def request_signature() -> tuple[str, str]:
+                async def request_signature() -> str | None:
                     for attempt in range(2):
-                        signed = await client.post(
-                            f'/storage/v1/object/sign/exercise-images/{path}',
-                            json={'expiresIn': 600},
-                            headers=service_headers,
-                        )
+                        try:
+                            signed = await client.post(
+                                f'/storage/v1/object/sign/exercise-images/{path}',
+                                json={'expiresIn': 600},
+                                headers=service_headers,
+                            )
+                        except httpx.HTTPError as error:
+                            if attempt == 0:
+                                await asyncio.sleep(0.15)
+                                continue
+                            logger.warning('Supabase Storage image signing failed for %s: %s', path, error)
+                            return None
                         if not signed.is_error:
-                            return path, f"{settings.supabase_url}/storage/v1{signed.json()['signedURL']}"
+                            try:
+                                return f"{settings.supabase_url}/storage/v1{signed.json()['signedURL']}"
+                            except (KeyError, ValueError):
+                                logger.warning('Supabase Storage returned an invalid signature for %s', path)
+                                return None
                         if signed.status_code < 500 and signed.status_code != 429:
                             break
                         if attempt == 0:
                             await asyncio.sleep(0.15)
-                    raise HTTPException(status_code=502, detail='Impossible de préparer l’image de l’exercice.')
+                    logger.warning(
+                        'Supabase Storage image signing failed for %s (status %s): %s',
+                        path,
+                        signed.status_code,
+                        signed.text[:500],
+                    )
+                    return None
 
                 current_request = asyncio.create_task(request_signature())
                 signing_image_requests[path] = current_request
             try:
-                return await current_request
+                return path, await current_request
             finally:
                 if signing_image_requests.get(path) is current_request:
                     signing_image_requests.pop(path, None)
 
         if missing_paths:
             for path, url in await asyncio.gather(*(sign_path(path) for path in missing_paths)):
-                signed_image_cache[path] = (url, now + SIGNED_IMAGE_CACHE_TTL_SECONDS)
+                if url:
+                    signed_image_cache[path] = (url, now + SIGNED_IMAGE_CACHE_TTL_SECONDS)
+                else:
+                    signed_image_cache.pop(path, None)
         for exercise in exercises:
-            exercise['image_url'] = signed_image_cache[exercise['image_path']][0]
+            cached_image = signed_image_cache.get(exercise['image_path'])
+            exercise['image_url'] = cached_image[0] if cached_image else None
     return exercises
 
 

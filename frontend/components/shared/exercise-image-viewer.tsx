@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { ExternalLink, Maximize2, Minimize2, ZoomIn, ZoomOut } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ExternalLink, Maximize2, Minimize2, ZoomIn, ZoomOut } from 'lucide-react';
+import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 
@@ -56,7 +57,7 @@ function ImageViewport({ src, alt, zoom, fullscreen = false }: { src: string; al
   </div>;
 }
 
-export function ExerciseImageViewer({ src, alt, title }: { src: string | null; alt: string; title: string }) {
+export function ExerciseImageViewer({ src, alt, title, navigation }: { src: string | null; alt: string; title: string; navigation?: { previous: string | null; next: string | null } }) {
   const [zoom, setZoom] = useState(1);
   const [fullscreen, setFullscreen] = useState(false);
 
@@ -74,7 +75,14 @@ export function ExerciseImageViewer({ src, alt, title }: { src: string | null; a
   </div>;
   return <>
     <Card className="overflow-hidden">
-      <div className="flex items-center justify-between border-b border-border bg-secondary/30 px-4 py-2.5"><p className="text-sm font-medium text-foreground">Énoncé de l’exercice</p>{controls}</div>
+      <div className="flex items-center justify-between gap-2 border-b border-border bg-secondary/30 px-4 py-2.5"><p className="text-sm font-medium text-foreground">Énoncé de l’exercice</p>{navigation && <div className="flex items-center gap-1">
+        <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Exercice précédent du chapitre" title="Exercice précédent" disabled={!navigation.previous} asChild={Boolean(navigation.previous)}>
+          {navigation.previous ? <Link href={navigation.previous}><ChevronLeft className="h-4 w-4" /></Link> : <ChevronLeft className="h-4 w-4" />}
+        </Button>
+        <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Exercice suivant du chapitre" title="Exercice suivant" disabled={!navigation.next} asChild={Boolean(navigation.next)}>
+          {navigation.next ? <Link href={navigation.next}><ChevronRight className="h-4 w-4" /></Link> : <ChevronRight className="h-4 w-4" />}
+        </Button>
+      </div>}{controls}</div>
       <CardContent className="p-0"><ImageViewport src={src} alt={alt} zoom={zoom} /></CardContent>
     </Card>
     {fullscreen && <div className="fixed inset-0 z-50 flex flex-col bg-background/95 backdrop-blur-sm"><div className="flex items-center justify-between border-b border-border px-4 py-3"><p className="truncate text-sm font-medium text-foreground">{title}</p><ZoomControls zoom={zoom} onZoom={setZoom} onFullscreen={() => setFullscreen(false)} fullscreen /></div><ImageViewport src={src} alt={alt} zoom={zoom} fullscreen /></div>}

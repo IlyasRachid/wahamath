@@ -37,6 +37,7 @@ function ExerciseViewer({
   const isTeacherView = usePathname().startsWith('/prof/');
   const activeBasePath = isTeacherView ? '/prof/exercices' : basePath;
   const [exercise, setExercise] = useState<RemoteExercise | null>(null);
+  const [exerciseNavigation, setExerciseNavigation] = useState<{ previous: string | null; next: string | null } | undefined>();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [comments, setComments] = useState<Comment[]>([]);
@@ -79,6 +80,31 @@ function ExerciseViewer({
     };
     loadExercise();
   }, [params.id]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setExerciseNavigation(undefined);
+    if (!isTeacherView || !exercise?.classes?.code || !exercise.chapters?.title) return;
+
+    const loadChapterNavigation = async () => {
+      try {
+        const { items } = await cachedApiGet<{ items: any[] }>('/api/exercises', 5 * 60_000, ['exercises']);
+        const chapterExercises = items
+          .filter((item) => item.classes?.code === exercise.classes?.code && item.chapters?.title === exercise.chapters?.title)
+          .sort((a, b) => String(a.title).localeCompare(String(b.title), 'fr', { numeric: true, sensitivity: 'base' }));
+        const currentIndex = chapterExercises.findIndex((item) => item.id === params.id);
+        if (cancelled || currentIndex < 0) return;
+        setExerciseNavigation({
+          previous: currentIndex > 0 ? `/prof/exercices/${chapterExercises[currentIndex - 1].id}` : null,
+          next: currentIndex < chapterExercises.length - 1 ? `/prof/exercices/${chapterExercises[currentIndex + 1].id}` : null,
+        });
+      } catch {
+        if (!cancelled) setExerciseNavigation(undefined);
+      }
+    };
+    void loadChapterNavigation();
+    return () => { cancelled = true; };
+  }, [params.id, isTeacherView, exercise?.classes?.code, exercise?.chapters?.title]);
 
   useEffect(() => {
     let cancelled = false;
@@ -190,7 +216,7 @@ function ExerciseViewer({
         {isTeacherView && <Button asChild size="sm" variant="outline"><Link href={`/prof/exercices/${params.id}/modifier`}><Pencil className="h-4 w-4" />Modifier</Link></Button>}
       </PageHeader>
 
-      <ExerciseImageViewer src={exercise.image_url} alt={`Énoncé : ${exercise.title}`} title={exercise.title} />
+      <ExerciseImageViewer src={exercise.image_url} alt={`Énoncé : ${exercise.title}`} title={exercise.title} navigation={exerciseNavigation} />
 
       <div className="space-y-1"><p className="text-xs text-muted-foreground">Publié le {new Date(exercise.published_at).toLocaleDateString('fr-FR')}</p>{exercise.description && <p className="text-sm text-muted-foreground">{exercise.description}</p>}</div>
 

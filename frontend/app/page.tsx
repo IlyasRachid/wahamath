@@ -159,7 +159,7 @@ export default function Home() {
           {[
             { icon: BookOpen, title: 'Exercices par classe', desc: '2SM, 1SM, 2PC&SVT, TCS — organisés par chapitre' },
             { icon: MessageSquare, title: 'Questions et débats encadrés', desc: 'Discussions modérées par les professeurs' },
-            { icon: Video, title: 'Cours en direct', desc: 'Cours et séances en direct avec accompagnement' },
+            { icon: Video, title: 'Cours en direct', desc: 'Accompagnement par des livestream' },
           ].map((f) => (
             <div key={f.title} className="flex flex-col items-center text-center">
               <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-lg bg-secondary text-primary">

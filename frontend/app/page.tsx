@@ -167,11 +167,6 @@ export default function Home() {
               </div>
               <h3 className="text-sm font-semibold text-foreground">{f.title}</h3>
               <p className="mt-1 text-xs text-muted-foreground">{f.desc}</p>
-              {f.icon === Video && (
-                <Button asChild variant="outline" size="sm" className="mt-3">
-                  <Link href="/connexion?role=student">Livestreams</Link>
-                </Button>
-              )}
             </div>
           ))}
         </div>

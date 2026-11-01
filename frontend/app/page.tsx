@@ -141,15 +141,6 @@ export default function Home() {
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
                 Scannez le code avec votre téléphone pour ouvrir directement la discussion.
               </p>
-              <a
-                href={whatsappUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
-              >
-                +212 684 915 585
-                <ArrowRight className="h-4 w-4" />
-              </a>
             </div>
           </div>
         </section>

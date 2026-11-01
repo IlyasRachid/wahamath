@@ -172,11 +172,11 @@ export default function Home() {
           </div>
           <p>
             Contact :{' '}
-            <a href="mailto:wahamath@hotmail.com" className="hover:text-foreground hover:underline">
+            <a href="mailto:wahamath@hotmail.com" className="font-semibold text-sky-400 hover:text-sky-300 hover:underline">
               wahamath@hotmail.com
             </a>
             {' · '}
-            <a href={whatsappUrl} target="_blank" rel="noreferrer" className="hover:text-foreground hover:underline">
+            <a href={whatsappUrl} target="_blank" rel="noreferrer" className="font-semibold text-emerald-400 hover:text-emerald-300 hover:underline">
               WhatsApp
             </a>
           </p>

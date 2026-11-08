@@ -132,7 +132,7 @@ function ExerciseViewer({
     const exercisePath = `/api/exercises/${params.id}`;
     const commentsPath = `${exercisePath}/comments`;
     if (isApiCacheStale(exercisePath) || isApiCacheStale(commentsPath)) void revalidateExercise();
-    const interval = window.setInterval(revalidateExercise, 30_000);
+    const interval = window.setInterval(revalidateExercise, 60_000);
     document.addEventListener('visibilitychange', revalidateExercise);
     return () => {
       cancelled = true;

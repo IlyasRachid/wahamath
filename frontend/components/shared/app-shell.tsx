@@ -30,6 +30,10 @@ import { clearApiCache, invalidateCacheTags, peekApiCache, preloadAuthenticatedD
 import { ThemeToggle } from '@/components/shared/theme-toggle';
 import { PresenceHeartbeat } from '@/components/shared/presence-heartbeat';
 
+// Refreshing every two seconds created a large volume of otherwise identical
+// API logs. Mutations and visibility changes still refresh immediately.
+const BACKGROUND_REFRESH_INTERVAL_MS = 60_000;
+
 export type NavItem = {
   label: string;
   href: string;
@@ -136,7 +140,7 @@ export function AppShell({ role, navGroups, bottomNav, user, children }: Props) 
       }
     };
     refreshCounts();
-    const interval = window.setInterval(refreshCounts, 2_000);
+    const interval = window.setInterval(refreshCounts, BACKGROUND_REFRESH_INTERVAL_MS);
     document.addEventListener('visibilitychange', refreshCounts);
     return () => { window.clearInterval(interval); document.removeEventListener('visibilitychange', refreshCounts); };
   }, [role, pathname]);
